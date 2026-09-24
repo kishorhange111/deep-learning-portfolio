@@ -1,0 +1,8 @@
+{
+  "val_pixel_accuracy": 0.8304,
+  "val_mean_iou": 0.6007,
+  "val_loss": 0.4358,
+  "epochs_trained": 18.0,
+  "parameters": 2058979.0,
+  "train_minutes": 11.6442
+}

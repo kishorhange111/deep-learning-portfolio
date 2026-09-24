@@ -1,0 +1,7 @@
+{
+  "test_pair_accuracy": 0.9733,
+  "test_loss": 0.0362,
+  "epochs_trained": 20.0,
+  "parameters": 5318.0,
+  "train_minutes": 2.1135
+}

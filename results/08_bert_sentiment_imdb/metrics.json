@@ -1,0 +1,9 @@
+{
+  "test_accuracy": 0.9239,
+  "test_f1": 0.9246,
+  "baseline_tfidf_logreg_accuracy": 0.9042,
+  "baseline_tfidf_logreg_f1": 0.9044,
+  "epochs": 2.0,
+  "parameters": 109483778.0,
+  "train_minutes": 7.3648
+}

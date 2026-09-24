@@ -1,0 +1,11 @@
+{
+  "val_triplet_accuracy_before": 0.6337,
+  "val_cosine_anchor_positive_before": 0.6206,
+  "val_cosine_anchor_negative_before": 0.5796,
+  "val_triplet_accuracy_after": 0.8347,
+  "val_cosine_anchor_positive_after": 0.3626,
+  "val_cosine_anchor_negative_after": 0.0164,
+  "epochs_trained": 10.0,
+  "trainable_parameters": 60510720.0,
+  "train_minutes": 4.9758
+}

@@ -1,0 +1,7 @@
+{
+  "val_char_accuracy": 0.9953,
+  "val_exact_match_accuracy": 0.9812,
+  "epochs_trained": 40.0,
+  "parameters": 205324.0,
+  "train_minutes": 7.194
+}

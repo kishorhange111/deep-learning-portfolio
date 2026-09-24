@@ -1,0 +1,9 @@
+__pycache__/
+*.pyc
+logs/
+results_quick/
+*.tgz
+*.keras
+checkpoints/
+# Flickr8k photos are not redistributable
+results/04_image_captioning_flickr8k/sample_captions.png

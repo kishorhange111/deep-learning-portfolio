@@ -1,0 +1,10 @@
+{
+  "test_bleu_1": 0.5941,
+  "test_bleu_2": 0.4076,
+  "test_bleu_3": 0.2701,
+  "test_bleu_4": 0.1787,
+  "val_masked_accuracy": 0.3964,
+  "epochs_trained": 11.0,
+  "parameters": 16702736.0,
+  "train_minutes": 5.255
+}
