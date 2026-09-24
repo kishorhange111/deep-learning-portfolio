@@ -9,6 +9,7 @@ Every project is a single, heavily commented `train.py` written to be read top-t
 | # | Project | Key techniques | Result |
 |---|---|---|---|
 | 01 | [Vision Transformer from scratch](01_vision_transformer_cifar100) | patch embeddings, multi-head self-attention, no convolutions | **48.8 %** top-1 · 77.0 % top-5 on CIFAR-100 |
+| 02 | [ShiftViT — a ViT without attention](02_shiftvit_cifar10) | zero-parameter shift token-mixing, hierarchical stages, stochastic depth, warm-up cosine | **77.9 %** top-1 on CIFAR-10 (Keras reference 76.4 %) |
 | 03 | [U-Net pet segmentation](03_unet_pet_segmentation) | encoder–decoder, separable convs, residual skips | **83.0 %** pixel acc · **0.60** mIoU |
 | 04 | [Image captioning](04_image_captioning_flickr8k) | frozen EfficientNet + Transformer decoder, cross-attention, BLEU | **BLEU-1 0.59** · BLEU-4 0.18 |
 | 05 | [Siamese network – contrastive loss](05_siamese_contrastive_mnist) | metric learning, shared weights | **97.3 %** pair accuracy |
