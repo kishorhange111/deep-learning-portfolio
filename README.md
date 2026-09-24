@@ -8,6 +8,7 @@ Every project is a single, heavily commented `train.py` written to be read top-t
 
 | # | Project | Key techniques | Result |
 |---|---|---|---|
+| 01 | [Vision Transformer from scratch](01_vision_transformer_cifar100) | patch embeddings, multi-head self-attention, no convolutions | **48.8 %** top-1 · 77.0 % top-5 on CIFAR-100 |
 | 03 | [U-Net pet segmentation](03_unet_pet_segmentation) | encoder–decoder, separable convs, residual skips | **83.0 %** pixel acc · **0.60** mIoU |
 | 04 | [Image captioning](04_image_captioning_flickr8k) | frozen EfficientNet + Transformer decoder, cross-attention, BLEU | **BLEU-1 0.59** · BLEU-4 0.18 |
 | 05 | [Siamese network – contrastive loss](05_siamese_contrastive_mnist) | metric learning, shared weights | **97.3 %** pair accuracy |
@@ -15,7 +16,7 @@ Every project is a single, heavily commented `train.py` written to be read top-t
 | 07 | [LSTM seq2seq addition](07_seq2seq_addition_lstm) | encoder–decoder RNN, input reversal | **98.1 %** exact-match |
 | 08 | [BERT sentiment analysis](08_bert_sentiment_imdb) | Transformer fine-tuning, measured TF-IDF baseline | **92.4 %** acc (baseline 90.4 %) |
 
-*More projects (Vision Transformer, ShiftViT, GPT-2 LoRA vs. full fine-tuning) are being added.*
+*More projects (ShiftViT, GPT-2 LoRA vs. full fine-tuning, BERT distillation + ONNX + int8 quantization) are being added.*
 
 ## Repository layout
 ```
@@ -39,7 +40,7 @@ python run_all.py               # everything
 python run_all.py 05 07         # selected projects
 QUICK=1 python run_all.py       # ~5-minute smoke test of all pipelines
 ```
-Training was done on Google Colab (NVIDIA L4 and T4) driven from the terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli) — see [`ops/`](ops).
+Training was done on Google Colab (NVIDIA A100, L4 and T4) driven from the terminal with the [Colab CLI](https://github.com/googlecolab/google-colab-cli) — see [`ops/`](ops).
 
 ## Credits
 Several projects are re-implementations of [Keras code examples](https://keras.io/examples/) (Apache-2.0), extended with extra evaluation (BLEU, mIoU, before/after metrics, baselines), cached feature extraction and documentation. Original authors are credited in each project.

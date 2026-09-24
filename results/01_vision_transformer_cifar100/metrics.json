@@ -1,0 +1,7 @@
+{
+  "test_accuracy": 0.4879,
+  "test_top5_accuracy": 0.7701,
+  "epochs_trained": 35.0,
+  "parameters": 21759019.0,
+  "train_minutes": 40.524
+}
