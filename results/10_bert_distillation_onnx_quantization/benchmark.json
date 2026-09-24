@@ -1,0 +1,74 @@
+{
+  "rows": [
+    {
+      "variant": "BERT-base \u00b7 PyTorch fp32 (teacher)",
+      "latency_ms_p50": 64.80289950002316,
+      "latency_ms_p95": 158.95648415005326,
+      "size_mb": 417.64746856689453,
+      "accuracy": 0.918,
+      "speedup_vs_bert_pytorch": 1.0,
+      "latency_reduction_percent": 0.0,
+      "size_reduction_percent": 0.0
+    },
+    {
+      "variant": "BERT-base \u00b7 ONNX Runtime fp32",
+      "latency_ms_p50": 48.214216499957274,
+      "latency_ms_p95": 108.93339735001743,
+      "size_mb": 417.8583164215088,
+      "accuracy": 0.918,
+      "speedup_vs_bert_pytorch": 1.3440620672552168,
+      "latency_reduction_percent": 25.598674022386845,
+      "size_reduction_percent": -0.05048464805443853
+    },
+    {
+      "variant": "BERT-base \u00b7 ONNX Runtime int8",
+      "latency_ms_p50": 27.71216500002538,
+      "latency_ms_p95": 57.837418250085165,
+      "size_mb": 105.14786720275879,
+      "accuracy": 0.917,
+      "speedup_vs_bert_pytorch": 2.3384278889781367,
+      "latency_reduction_percent": 57.236226752453454,
+      "size_reduction_percent": 74.82377480616353
+    },
+    {
+      "variant": "DistilBERT (distilled) \u00b7 PyTorch fp32",
+      "latency_ms_p50": 32.897589000072,
+      "latency_ms_p95": 71.68923014997955,
+      "size_mb": 255.41309356689453,
+      "accuracy": 0.911,
+      "speedup_vs_bert_pytorch": 1.9698373488671563,
+      "latency_reduction_percent": 49.23438726679159,
+      "size_reduction_percent": 38.84481224241275
+    },
+    {
+      "variant": "DistilBERT (distilled) \u00b7 ONNX Runtime fp32",
+      "latency_ms_p50": 24.30475349990502,
+      "latency_ms_p95": 59.5132160999924,
+      "size_mb": 255.52671909332275,
+      "accuracy": 0.911,
+      "speedup_vs_bert_pytorch": 2.66626442026151,
+      "latency_reduction_percent": 62.49434255654512,
+      "size_reduction_percent": 38.81760615714229
+    },
+    {
+      "variant": "DistilBERT (distilled) \u00b7 ONNX Runtime int8",
+      "latency_ms_p50": 13.582632499947067,
+      "latency_ms_p95": 14.999556049872343,
+      "size_mb": 64.23792839050293,
+      "accuracy": 0.9125,
+      "speedup_vs_bert_pytorch": 4.771011768173489,
+      "latency_reduction_percent": 79.04008523578145,
+      "size_reduction_percent": 84.61910265829519
+    }
+  ],
+  "cpu": "x86_64",
+  "threads": 12,
+  "gpu_accuracy": {
+    "teacher": 0.92256,
+    "student_plain": 0.91432,
+    "student_distilled": 0.91488
+  },
+  "teacher_train_min": 1.83039733171463,
+  "student_plain_train_min": 1.0990931272506714,
+  "student_distilled_train_min": 1.1140751202901205
+}

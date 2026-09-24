@@ -1,0 +1,12 @@
+{
+  "teacher_test_accuracy": 0.9226,
+  "student_plain_test_accuracy": 0.9143,
+  "student_distilled_test_accuracy": 0.9149,
+  "final_latency_reduction_percent": 79.0401,
+  "final_speedup_x": 4.771,
+  "final_size_reduction_percent": 84.6191,
+  "final_cpu_accuracy": 0.9125,
+  "teacher_train_min": 1.8304,
+  "student_plain_train_min": 1.0991,
+  "student_distilled_train_min": 1.1141
+}

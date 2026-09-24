@@ -15,8 +15,10 @@ Every project is a single, heavily commented `train.py` written to be read top-t
 | 06 | [Siamese network – triplet loss](06_siamese_triplet_resnet) | ResNet50 transfer learning, custom train step | triplet acc **63 % → 83.5 %** |
 | 07 | [LSTM seq2seq addition](07_seq2seq_addition_lstm) | encoder–decoder RNN, input reversal | **98.1 %** exact-match |
 | 08 | [BERT sentiment analysis](08_bert_sentiment_imdb) | Transformer fine-tuning, measured TF-IDF baseline | **92.4 %** acc (baseline 90.4 %) |
+| 10 | [BERT optimization: distillation + ONNX + int8](10_bert_distillation_onnx_quantization) | knowledge distillation, ONNX Runtime, dynamic quantization, CPU latency benchmark | **4.8× faster**, **85 % smaller**, −0.6 pts accuracy |
+| 14 | [Molecule generation with a Transformer](14_molecule_generation_gpt) | GPT from scratch on SMILES, RDKit validity / uniqueness / novelty | **73 %** valid · **~100 %** unique & novel · property distributions matched |
 
-*More projects (ShiftViT, GPT-2 LoRA vs. full fine-tuning, BERT distillation + ONNX + int8 quantization) are being added.*
+*More projects (ShiftViT, GPT-2 LoRA vs. full fine-tuning, neural style transfer, AdaIN, Music Transformer) are being added.*
 
 ## Repository layout
 ```
