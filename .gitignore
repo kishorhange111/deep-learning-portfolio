@@ -6,6 +6,6 @@ results_quick/
 *.keras
 checkpoints/
 # Flickr8k photos are not redistributable
-results/04_image_captioning_flickr8k/sample_captions.png
+computer-vision/image-captioning-cnn-transformer/results/sample_captions.png
 # MAESTRO-derived MIDI (CC BY-NC-SA) - generated locally, not redistributed
 *.mid

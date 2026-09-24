@@ -1,0 +1,23 @@
+{
+  "metrics": {
+    "resolution": 512,
+    "lbfgs_steps": 300,
+    "pairs": 12,
+    "mean_seconds_per_image": 24.906114717324574,
+    "gpu": "Tesla T4"
+  },
+  "timings": {
+    "astronaut+starry_night": 27.901041507720947,
+    "astronaut+great_wave": 28.958540678024292,
+    "astronaut+impression_sunrise": 30.484957456588745,
+    "astronaut+the_scream": 32.84475064277649,
+    "coffee+starry_night": 22.715537786483765,
+    "coffee+great_wave": 22.131126880645752,
+    "coffee+impression_sunrise": 22.22300934791565,
+    "coffee+the_scream": 22.398435831069946,
+    "cat+starry_night": 22.33900237083435,
+    "cat+great_wave": 22.33829379081726,
+    "cat+impression_sunrise": 22.269281148910522,
+    "cat+the_scream": 22.269399166107178
+  }
+}

@@ -10,13 +10,10 @@ Every training script follows the same pattern so results are comparable:
 import json
 import os
 import random
+import sys
 import time
 
 import numpy as np
-
-# All results land in <repo>/results/<project_name>/ so they can be committed to GitHub.
-REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-RESULTS_ROOT = os.environ.get("RESULTS_ROOT", os.path.join(REPO_ROOT, "results"))
 
 
 def set_seed(seed=42):
@@ -31,9 +28,13 @@ def set_seed(seed=42):
         pass
 
 
-def results_dir(project):
-    """Create (if needed) and return the output folder of one project."""
-    path = os.path.join(RESULTS_ROOT, project)
+def results_dir(project=None):
+    """Create (if needed) and return the project's output folder: `results/` next to the running train.py.
+
+    Set RESULTS_DIR to write somewhere else (e.g. a scratch folder for quick smoke tests).
+    `project` is kept for readability of the calling code.
+    """
+    path = os.environ.get("RESULTS_DIR") or os.path.join(os.path.dirname(os.path.abspath(sys.argv[0])), "results")
     os.makedirs(path, exist_ok=True)
     return path
 
