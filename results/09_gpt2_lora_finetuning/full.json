@@ -1,0 +1,16 @@
+{
+  "mode": "full",
+  "trainable_params": 124439808,
+  "total_params": 124439808,
+  "trainable_percent": 100.0,
+  "peak_gpu_memory_gb": 10.65941071510315,
+  "train_minutes": 3.4519134322802225,
+  "val_perplexity_before": 41.112674730467035,
+  "val_perplexity_after": 24.575705771483022,
+  "final_train_loss": 3.3631386756896973,
+  "samples": {
+    "I like basketball": "I like basketball, and i have been practicing with a buddy.   \nwe play on the same team, but i am playing in a different state.  \nmy buddy, who lives in a different state, is a senior.   \nso we play against each other and i have been practicing a lot with the guys.  \nso i am playing a",
+    "That Italian restaurant is": "That Italian restaurant is a bit of a fuck up, so i'm going to call it quesadilla, a la ciudadilla. \n\nmy friend and i have a pretty large family, and i was a huge fan of the place. we were all going to the same place, and i was going to the same place, but my dad and i decided to go",
+    "Today I messed up by": "Today I messed up by leaving the bathroom. i went to the bathroom to get ready for work. i went to the bathroom to get dressed and i was feeling a little bit lazy and i went back to the bathroom, and i noticed that the bathroom is empty. i went back inside to get some clothes, and the smell was still there. i went to get my phone and it was still"
+  }
+}

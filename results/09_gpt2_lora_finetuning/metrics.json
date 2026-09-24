@@ -1,0 +1,9 @@
+{
+  "lora_trainable_params": 909312.0,
+  "full_trainable_params": 124439808.0,
+  "memory_saving_percent": 69.1651,
+  "speedup_percent": 42.0983,
+  "full_val_perplexity": 24.5757,
+  "lora_val_perplexity": 29.4194,
+  "base_val_perplexity": 41.1127
+}

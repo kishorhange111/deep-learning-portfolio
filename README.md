@@ -16,10 +16,13 @@ Every project is a single, heavily commented `train.py` written to be read top-t
 | 06 | [Siamese network – triplet loss](06_siamese_triplet_resnet) | ResNet50 transfer learning, custom train step | triplet acc **63 % → 83.5 %** |
 | 07 | [LSTM seq2seq addition](07_seq2seq_addition_lstm) | encoder–decoder RNN, input reversal | **98.1 %** exact-match |
 | 08 | [BERT sentiment analysis](08_bert_sentiment_imdb) | Transformer fine-tuning, measured TF-IDF baseline | **92.4 %** acc (baseline 90.4 %) |
+| 09 | [GPT-2: LoRA vs. full fine-tuning](09_gpt2_lora_finetuning) | parameter-efficient fine-tuning, KerasHub, memory/speed/perplexity comparison | LoRA: **0.73 %** of params, **−69 % GPU memory**, 70 % of the perplexity gain |
 | 10 | [BERT optimization: distillation + ONNX + int8](10_bert_distillation_onnx_quantization) | knowledge distillation, ONNX Runtime, dynamic quantization, CPU latency benchmark | **4.8× faster**, **85 % smaller**, −0.6 pts accuracy |
+| 12 | [AdaIN real-time style transfer](12_adain_style_transfer) | PyTorch, adaptive instance normalization, VGG encoder + learned decoder | **any unseen style in 31 ms** per 512² image |
+| 13 | [Music Transformer on MAESTRO](13_music_transformer_midi) | performance-event tokenizer, GPT from scratch, nucleus sampling | test perplexity **16.9** / 388 tokens; realistic density & dynamics |
 | 14 | [Molecule generation with a Transformer](14_molecule_generation_gpt) | GPT from scratch on SMILES, RDKit validity / uniqueness / novelty | **73 %** valid · **~100 %** unique & novel · property distributions matched |
 
-*More projects (ShiftViT, GPT-2 LoRA vs. full fine-tuning, neural style transfer, AdaIN, Music Transformer) are being added.*
+*Coming next: neural style transfer (Gatys, L-BFGS) — the optimisation-based counterpart of project 12.*
 
 ## Repository layout
 ```

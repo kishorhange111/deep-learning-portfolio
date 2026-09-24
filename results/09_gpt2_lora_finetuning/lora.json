@@ -1,0 +1,16 @@
+{
+  "mode": "lora",
+  "trainable_params": 909312,
+  "total_params": 125330688,
+  "trainable_percent": 0.7255302069354315,
+  "peak_gpu_memory_gb": 3.28682279586792,
+  "train_minutes": 1.9987167477607728,
+  "val_perplexity_before": 41.112674730467035,
+  "val_perplexity_after": 29.419426346299954,
+  "final_train_loss": 3.5732996463775635,
+  "samples": {
+    "I like basketball": "I like basketball and basketball, so I'm going to be taking a class on how to get the most out of a game. \n\nso this morning I woke up and went out to play some basketball with my mom. \n\nshe had a big basketball hoop and she had her mom play it with a stick.     i'm sitting at the kitchen table and my mom comes",
+    "That Italian restaurant is": "That Italian restaurant is so good, I don't even remember it. But I remember that it was in a restaurant called the Italian restaurant. I was at the table, and it looked like a restaurant with a big patio, but with the windows open. I thought it was just a restaurant with a huge patio.\n\nThe restaurant was in an old building with a lot of old buildings on it",
+    "Today I messed up by": "Today I messed up by accidentally touching the wrong side of a toilet.  \n\n   \n\n   i was standing in front of the toilet and was looking around to see if there was a door or window, so i looked in the mirror and saw that the door was locked.  \n  \n \n\n    i walked over to the door to see the"
+  }
+}

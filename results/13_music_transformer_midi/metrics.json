@@ -1,0 +1,41 @@
+{
+  "metrics": {
+    "params": 26142208,
+    "train_iterations": 1237,
+    "train_minutes": 35.026865073045094,
+    "train_tokens": 25530098,
+    "test_perplexity": 16.90832474547923,
+    "pitch_class_similarity_generated_vs_real": 0.8756278784994506,
+    "notes_per_second_real": 10.322581184112462,
+    "notes_per_second_generated": 11.730472031419325,
+    "mean_velocity_real": 65.33082880841619,
+    "mean_velocity_generated": 67.0981757887097,
+    "gpu": "Tesla T4"
+  },
+  "history": [
+    {
+      "iter": 200,
+      "train_loss": 3.935473918914795
+    },
+    {
+      "iter": 400,
+      "train_loss": 3.675945997238159
+    },
+    {
+      "iter": 600,
+      "train_loss": 3.1901297569274902
+    },
+    {
+      "iter": 800,
+      "train_loss": 3.1477713584899902
+    },
+    {
+      "iter": 1000,
+      "train_loss": 3.011190176010132
+    },
+    {
+      "iter": 1200,
+      "train_loss": 2.861727476119995
+    }
+  ]
+}
