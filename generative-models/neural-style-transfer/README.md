@@ -41,3 +41,15 @@ Content photos: scikit-image sample images (public domain / CC0). Styles: public
 pip install torch torchvision scikit-image matplotlib
 python generative-models/neural-style-transfer/train.py
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python generative-models/neural-style-transfer/train.py   # smoke test on a tiny subset
+!python generative-models/neural-style-transfer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `generative-models/neural-style-transfer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.

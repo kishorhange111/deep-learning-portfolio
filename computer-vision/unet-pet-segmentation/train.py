@@ -24,6 +24,7 @@ Dataset : Oxford-IIIT Pet - 7,390 images with pixel-level "trimap" masks.
 Adapted from the Keras example by François Chollet (Apache-2.0):
 https://keras.io/examples/vision/oxford_pets_image_segmentation/
 """
+
 import os
 import random
 import sys
@@ -64,6 +65,7 @@ def download():
                     break
                 except Exception as e:  # try the next mirror
                     print(f"  failed: {e}")
+            # Extract right after a successful download (archives that were already present are not re-extracted).
             with tarfile.open(target) as t:
                 t.extractall(DATA_DIR)
 
@@ -72,12 +74,18 @@ def list_pairs():
     """Match every image with its mask. Masks are .png 'trimaps' with values 1, 2, 3."""
     img_dir, mask_dir = os.path.join(DATA_DIR, "images"), os.path.join(DATA_DIR, "annotations/trimaps")
     images = sorted(os.path.join(img_dir, f) for f in os.listdir(img_dir) if f.endswith(".jpg"))
-    masks = sorted(os.path.join(mask_dir, f) for f in os.listdir(mask_dir)
-                   if f.endswith(".png") and not f.startswith("."))
+    masks = sorted(
+        os.path.join(mask_dir, f) for f in os.listdir(mask_dir) if f.endswith(".png") and not f.startswith(".")
+    )
     return images, masks
 
 
 def load_pair(img_path, mask_path):
+    """Read one photo and its trimap from disk (inside a tf.data pipeline).
+
+    Returns the image as float32 in [0, 1] of shape (160, 160, 3) and the mask as
+    uint8 class ids {0, 1, 2} of shape (160, 160, 1).
+    """
     # decode_image (not decode_jpeg): a few files in this dataset are really PNG/GIF.
     img = tf.io.decode_image(tf.io.read_file(img_path), channels=3, expand_animations=False)
     img.set_shape([None, None, 3])
@@ -85,22 +93,24 @@ def load_pair(img_path, mask_path):
     mask = tf.io.decode_png(tf.io.read_file(mask_path), channels=1)
     # "nearest" resizing: never invent in-between label values like 1.5.
     mask = tf.image.resize(mask, IMG_SIZE, method="nearest")
-    mask = tf.cast(mask, tf.uint8) - 1          # labels 1,2,3 -> 0,1,2
+    mask = tf.cast(mask, tf.uint8) - 1  # labels 1,2,3 -> 0,1,2
     return img, mask
 
 
 def make_dataset(images, masks, shuffle):
-    ds = tf.data.Dataset.from_tensor_slices((images, masks))
+    """Build a batched, prefetched tf.data pipeline of (image, mask) pairs; decoding runs in parallel on the CPU."""
+    ds = tf.data.Dataset.from_tensor_slices((images, masks))  # file paths only; pixels are loaded lazily
     if shuffle:
-        ds = ds.shuffle(len(images), seed=42)
+        ds = ds.shuffle(len(images), seed=42)  # buffer = whole dataset -> a full shuffle
     return ds.map(load_pair, num_parallel_calls=tf.data.AUTOTUNE).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
 
 
 def build_model():
+    """Xception-style U-Net: 4 down-sampling and 4 up-sampling stages with residual connections, per-pixel softmax."""
     inputs = keras.Input(IMG_SIZE + (3,))
 
     # ----- Encoder -----
-    x = layers.Conv2D(32, 3, strides=2, padding="same")(inputs)
+    x = layers.Conv2D(32, 3, strides=2, padding="same")(inputs)  # 160 -> 80
     x = layers.BatchNormalization()(x)
     x = layers.Activation("relu")(x)
     previous = x  # kept for the residual connection
@@ -126,6 +136,7 @@ def build_model():
         x = layers.Conv2DTranspose(filters, 3, padding="same")(x)
         x = layers.BatchNormalization()(x)
         x = layers.UpSampling2D(2)(x)
+        # Upsample the block input too and match channels with a 1x1 conv, so it can be added as a residual.
         residual = layers.Conv2D(filters, 1, padding="same")(layers.UpSampling2D(2)(previous))
         x = layers.add([x, residual])
         previous = x
@@ -137,6 +148,7 @@ def build_model():
 def save_examples(model, images, masks, n=4):
     """Save a figure: input photo | true mask | predicted mask."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -154,15 +166,16 @@ def save_examples(model, images, masks, n=4):
 
 
 def main():
+    """Download data, split train/validation, train with early stopping and a time budget, save metrics and example masks."""
     set_seed(42)
     download()
     images, masks = list_pairs()
     pairs = list(zip(images, masks))
-    random.Random(1337).shuffle(pairs)
+    random.Random(1337).shuffle(pairs)  # fixed seed -> the same train/validation split on every run
     images, masks = [p[0] for p in pairs], [p[1] for p in pairs]
     if QUICK:
         images, masks = images[:600], masks[:600]
-    n_val = len(images) // 7   # ~1,000 validation images
+    n_val = len(images) // 7  # ~1,000 validation images
     train_ds = make_dataset(images[n_val:], masks[n_val:], shuffle=True)
     val_ds = make_dataset(images[:n_val], masks[:n_val], shuffle=False)
     print(f"train {len(images) - n_val} / val {n_val} images")
@@ -170,15 +183,20 @@ def main():
     model = build_model()
     model.compile(
         optimizer=keras.optimizers.Adam(1e-4),
-        loss="sparse_categorical_crossentropy",    # classification loss applied at every pixel
-        metrics=["accuracy",
-                 keras.metrics.MeanIoU(num_classes=NUM_CLASSES, sparse_y_true=True, sparse_y_pred=False, name="mean_iou")],
+        loss="sparse_categorical_crossentropy",  # classification loss applied at every pixel
+        # sparse_y_pred=False: predictions are per-class probabilities; MeanIoU takes their argmax itself.
+        metrics=[
+            "accuracy",
+            keras.metrics.MeanIoU(num_classes=NUM_CLASSES, sparse_y_true=True, sparse_y_pred=False, name="mean_iou"),
+        ],
     )
     model.summary()
 
     with Timer() as t:
         history = model.fit(
-            train_ds, validation_data=val_ds, epochs=EPOCHS,
+            train_ds,
+            validation_data=val_ds,
+            epochs=EPOCHS,
             callbacks=[
                 keras.callbacks.EarlyStopping(monitor="val_loss", patience=6, restore_best_weights=True),
                 make_time_limit_callback(TIME_LIMIT_MIN),
@@ -190,9 +208,14 @@ def main():
     save_examples(model, images[:n_val], masks[:n_val])
     save_results(
         PROJECT,
-        {"val_pixel_accuracy": acc, "val_mean_iou": miou, "val_loss": loss,
-         "epochs_trained": len(history.history["loss"]),
-         "parameters": model.count_params(), "train_minutes": t.minutes},
+        {
+            "val_pixel_accuracy": acc,
+            "val_mean_iou": miou,
+            "val_loss": loss,
+            "epochs_trained": len(history.history["loss"]),
+            "parameters": model.count_params(),
+            "train_minutes": t.minutes,
+        },
         history.history,
         curves=("loss", "accuracy", "mean_iou"),
     )

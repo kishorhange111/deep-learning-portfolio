@@ -37,4 +37,17 @@ The model reproduces the texture of real performances — density and dynamics w
 pip install torch pretty_midi matplotlib
 python generative-models/music-transformer/train.py        # downloads MAESTRO MIDI (57 MB), 35-min budget
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python generative-models/music-transformer/train.py   # smoke test on a tiny subset
+!python generative-models/music-transformer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `generative-models/music-transformer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Data: MAESTRO v3 (Hawthorne et al., 2019), Google Magenta, CC BY-NC-SA 4.0.

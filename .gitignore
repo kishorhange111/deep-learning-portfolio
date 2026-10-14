@@ -9,3 +9,6 @@ checkpoints/
 computer-vision/image-captioning-cnn-transformer/results/sample_captions.png
 # MAESTRO-derived MIDI (CC BY-NC-SA) - generated locally, not redistributed
 *.mid
+.ruff_cache/
+.pytest_cache/
+.venv/

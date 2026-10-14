@@ -1,11 +1,22 @@
-keras>=3.10
-tensorflow>=2.18
-keras-hub>=0.20
-torch>=2.5
-transformers>=4.57
-datasets>=4.0
-scikit-learn>=1.5
-numpy
-matplotlib
-nltk
-gdown
+# Runtime dependencies for every project in this repository (GPU training on Colab).
+# Lower bounds = versions the scripts were developed with; upper bounds guard against
+# breaking major releases. Install with:  pip install -r requirements.txt
+keras>=3.10,<4
+tensorflow>=2.18,<3
+keras-hub>=0.20,<1
+torch>=2.5,<3
+torchvision>=0.20,<1
+transformers>=4.57,<6
+datasets>=4.0,<5
+scikit-learn>=1.5,<2
+scikit-image>=0.24,<1        # public-domain sample photos for style transfer
+numpy>=1.26,<3
+pillow>=10,<12
+matplotlib>=3.8,<4
+nltk>=3.8,<4                 # BLEU for image captioning
+gdown>=5,<6                  # Totally-Looks-Like dataset download
+onnx>=1.16,<2
+onnxruntime>=1.18,<2
+onnxscript>=0.1,<1
+pretty_midi>=0.2.10,<0.3     # MIDI <-> performance-event tokens
+rdkit>=2024.3                # molecule validity / properties

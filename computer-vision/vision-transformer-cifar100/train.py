@@ -22,13 +22,13 @@ Dataset : CIFAR-100 - 60,000 32x32 colour images, 100 classes.
 Adapted from the Keras example by Khalid Salama (Apache-2.0):
 https://keras.io/examples/vision/image_classification_with_vision_transformer/
 """
+
 import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
 
 import keras
-import numpy as np
 from keras import layers, ops
 
 from common.utils import Timer, load_cifar, make_time_limit_callback, save_results, set_seed
@@ -41,14 +41,14 @@ QUICK = os.environ.get("QUICK") == "1"  # QUICK=1 -> tiny run to test the pipeli
 # ---------------------------------------------------------------------------
 NUM_CLASSES = 100
 INPUT_SHAPE = (32, 32, 3)
-IMAGE_SIZE = 72                 # images are up-scaled 32 -> 72 so we get more patches
-PATCH_SIZE = 6                  # 72 / 6 = 12 patches per side
-NUM_PATCHES = (IMAGE_SIZE // PATCH_SIZE) ** 2   # 144 tokens per image
-PROJECTION_DIM = 64             # size of each token vector
-NUM_HEADS = 4                   # attention heads per layer
+IMAGE_SIZE = 72  # images are up-scaled 32 -> 72 so we get more patches
+PATCH_SIZE = 6  # 72 / 6 = 12 patches per side
+NUM_PATCHES = (IMAGE_SIZE // PATCH_SIZE) ** 2  # 144 tokens per image
+PROJECTION_DIM = 64  # size of each token vector
+NUM_HEADS = 4  # attention heads per layer
 TRANSFORMER_UNITS = [PROJECTION_DIM * 2, PROJECTION_DIM]  # MLP inside each block
 TRANSFORMER_LAYERS = 8
-MLP_HEAD_UNITS = [2048, 1024]   # classifier on top
+MLP_HEAD_UNITS = [2048, 1024]  # classifier on top
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 BATCH_SIZE = 256
@@ -70,7 +70,9 @@ class Patches(layers.Layer):
         self.patch_size = patch_size
 
     def call(self, images):
+        """(batch, H, W, 3) images -> (batch, num_patches, patch_size*patch_size*3) tokens."""
         batch = ops.shape(images)[0]
+        # size == stride by default -> non-overlapping patches, like words in a sentence.
         patches = ops.image.extract_patches(images, size=self.patch_size)
         # extract_patches returns (batch, rows, cols, patch_pixels); merge rows*cols into one sequence axis.
         return ops.reshape(patches, (batch, -1, patches.shape[-1]))
@@ -86,6 +88,7 @@ class PatchEncoder(layers.Layer):
         self.position_embedding = layers.Embedding(num_patches, projection_dim)
 
     def call(self, patches):
+        """Linear projection of every patch plus the embedding of its position index."""
         positions = ops.expand_dims(ops.arange(self.num_patches), axis=0)  # [[0, 1, ..., 143]]
         return self.projection(patches) + self.position_embedding(positions)
 
@@ -99,11 +102,17 @@ def mlp(x, hidden_units, dropout_rate):
 
 
 def build_model(x_train):
+    """Build the ViT as a Keras functional model.
+
+    x_train is only used to fit the Normalization layer's per-channel mean and
+    variance, so no test statistics leak into preprocessing.
+    Returns a model mapping (batch, 32, 32, 3) images to (batch, 100) logits.
+    """
     # Data augmentation lives *inside* the model: it runs on the GPU and is
     # automatically switched off at evaluation time.
     augmentation = keras.Sequential(
         [
-            layers.Normalization(),                 # learns per-channel mean/std from training data
+            layers.Normalization(),  # learns per-channel mean/std from training data
             layers.Resizing(IMAGE_SIZE, IMAGE_SIZE),
             layers.RandomFlip("horizontal"),
             layers.RandomRotation(0.02),
@@ -121,11 +130,12 @@ def build_model(x_train):
     # Transformer encoder blocks ("pre-norm" variant: LayerNorm before attention/MLP).
     for _ in range(TRANSFORMER_LAYERS):
         h = layers.LayerNormalization(epsilon=1e-6)(tokens)
+        # Self-attention: query and value are the same token sequence, so every patch attends to every patch.
         h = layers.MultiHeadAttention(num_heads=NUM_HEADS, key_dim=PROJECTION_DIM, dropout=0.1)(h, h)
-        tokens2 = layers.Add()([h, tokens])                    # residual connection 1
+        tokens2 = layers.Add()([h, tokens])  # residual connection 1
         h = layers.LayerNormalization(epsilon=1e-6)(tokens2)
         h = mlp(h, TRANSFORMER_UNITS, dropout_rate=0.1)
-        tokens = layers.Add()([h, tokens2])                    # residual connection 2
+        tokens = layers.Add()([h, tokens2])  # residual connection 2
 
     # Classification head: flatten all tokens -> MLP -> 100 logits.
     x = layers.LayerNormalization(epsilon=1e-6)(tokens)
@@ -137,6 +147,7 @@ def build_model(x_train):
 
 
 def main():
+    """Load CIFAR-100, train the ViT under a time budget, evaluate top-1 / top-5 on the test set, save results."""
     set_seed(42)
     (x_train, y_train), (x_test, y_test) = load_cifar("cifar100")
     if QUICK:
@@ -147,6 +158,7 @@ def main():
     model.compile(
         # AdamW = Adam with decoupled weight decay; the standard optimizer for Transformers.
         optimizer=keras.optimizers.AdamW(learning_rate=LEARNING_RATE, weight_decay=WEIGHT_DECAY),
+        # from_logits=True: the last Dense layer has no softmax; the loss applies it in a numerically stable way.
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
         metrics=[
             keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
@@ -157,10 +169,11 @@ def main():
 
     with Timer() as t:
         history = model.fit(
-            x_train, y_train,
+            x_train,
+            y_train,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
-            validation_split=0.1,                      # 10% of training data to watch over-fitting
+            validation_split=0.1,  # 10% of training data to watch over-fitting
             callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)],
             verbose=2,
         )

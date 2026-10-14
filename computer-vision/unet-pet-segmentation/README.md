@@ -34,4 +34,17 @@ Pixel-level segmentation: for every pixel of a pet photo, predict **pet**, **bac
 python computer-vision/unet-pet-segmentation/train.py          # ~12 min on a T4
 QUICK=1 python computer-vision/unet-pet-segmentation/train.py  # 2-minute smoke test
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python computer-vision/unet-pet-segmentation/train.py   # smoke test on a tiny subset
+!python computer-vision/unet-pet-segmentation/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `computer-vision/unet-pet-segmentation/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by François Chollet (Apache-2.0). Dataset: Parkhi et al., 2012 (CC BY-SA 4.0).

@@ -1,0 +1,34 @@
+[project]
+name = "deep-learning-portfolio"
+version = "0.1.0"
+description = "Computer-vision, NLP and generative-model projects, each trained, evaluated and documented end to end."
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+
+[tool.ruff]
+line-length = 120
+target-version = "py310"
+extend-exclude = ["results"]
+
+[tool.ruff.lint]
+# pycodestyle errors/warnings, pyflakes, import sorting, bugbear, pyupgrade
+select = ["E", "W", "F", "I", "B", "UP"]
+ignore = [
+    "B905",   # zip() without strict=: inputs are aligned by construction; strict= would change behaviour
+]
+
+[tool.ruff.lint.per-file-ignores]
+# Training scripts: a few long, self-explanatory config / print lines
+"**/train.py" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["common"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+filterwarnings = [
+    # Keras-on-PyTorch converts tensors with np.array(x); harmless NumPy 2 deprecation notice
+    "ignore:__array__ implementation doesn't accept a copy keyword:DeprecationWarning",
+]
