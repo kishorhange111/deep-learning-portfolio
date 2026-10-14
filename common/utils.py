@@ -48,10 +48,14 @@ def make_time_limit_callback(minutes):
     import keras
 
     class TimeLimit(keras.callbacks.Callback):
+        """Checks the wall clock after every epoch and asks Keras to stop once the budget is spent."""
+
         def on_train_begin(self, logs=None):
+            """Start the clock when model.fit begins."""
             self.deadline = time.time() + minutes * 60
 
         def on_epoch_end(self, epoch, logs=None):
+            """Set stop_training once the deadline has passed (the current epoch always finishes)."""
             if time.time() > self.deadline:
                 print(f"[time limit] {minutes} min reached after epoch {epoch + 1}; stopping.")
                 self.model.stop_training = True
@@ -113,6 +117,7 @@ def load_cifar(name):
     label = "fine_label" if name == "cifar100" else "label"
 
     def to_numpy(split):
+        """Decode one split's PIL images into a uint8 array and labels into an (N, 1) int64 array."""
         x = np.stack([np.asarray(img.convert("RGB")) for img in ds[split]["img"]]).astype("uint8")
         y = np.asarray(ds[split][label], dtype="int64")[:, None]
         return x, y

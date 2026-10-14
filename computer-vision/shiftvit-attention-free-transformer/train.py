@@ -70,10 +70,12 @@ class DropPath(layers.Layer):
         self.seed_gen = keras.random.SeedGenerator(1337)
 
     def call(self, x, training=False):
+        """Return x unchanged at inference; during training zero whole samples with probability `rate`."""
         if not training or self.rate == 0.0:
             return x
         keep = 1.0 - self.rate
         shape = (ops.shape(x)[0],) + (1,) * (len(x.shape) - 1)   # one coin flip per sample
+        # keep + U[0, 1) is >= 1 with probability `keep`, so floor() gives a 0/1 Bernoulli(keep) mask.
         mask = ops.floor(keep + keras.random.uniform(shape, seed=self.seed_gen))
         return x / keep * mask                                   # rescale so the expected value is unchanged
 
@@ -81,6 +83,8 @@ class DropPath(layers.Layer):
 def shift(x, dy, dx):
     """Shift a feature map by (dy, dx) pixels, filling the empty border with zeros."""
     h, w = x.shape[1], x.shape[2]
+    # Pad one zero pixel on every side, then cut an h x w window offset by (dy, dx):
+    # the content moves by (dy, dx) and the uncovered border is zero.
     padded = ops.pad(x, [[0, 0], [1, 1], [1, 1], [0, 0]])
     return padded[:, 1 - dy:1 - dy + h, 1 - dx:1 - dx + w, :]
 
@@ -93,6 +97,7 @@ class ShiftViTBlock(layers.Layer):
         self.drop_path = DropPath(drop_path_rate)
 
     def build(self, input_shape):
+        """Create the LayerNorm and the 2x-expansion MLP once the channel count is known."""
         c = input_shape[-1]
         self.group = c // NUM_DIV
         self.norm = layers.LayerNormalization(epsilon=1e-5)
@@ -104,6 +109,7 @@ class ShiftViTBlock(layers.Layer):
         ])
 
     def call(self, x, training=False):
+        """Shift 4 channel groups by one pixel (token mixing), then apply the residual MLP (channel mixing)."""
         g = self.group
         # The "token mixing" step: 4 channel groups move one pixel in 4 directions.
         x = ops.concatenate([
@@ -121,10 +127,12 @@ class PatchMerging(layers.Layer):
     """Between stages: halve height/width and double channels (a strided 2x2 conv)."""
 
     def build(self, input_shape):
+        """Create the LayerNorm and a 2x2 / stride-2 conv that doubles the channel count."""
         self.norm = layers.LayerNormalization(epsilon=1e-5)
         self.reduce = layers.Conv2D(2 * input_shape[-1], 2, strides=2, use_bias=False)
 
     def call(self, x):
+        """(b, h, w, c) -> (b, h/2, w/2, 2c)."""
         return self.reduce(self.norm(x))
 
 
@@ -142,17 +150,24 @@ class WarmUpCosine(keras.optimizers.schedules.LearningRateSchedule):
 
     def __call__(self, step):
         step = ops.cast(step, "float32")
+        # progress goes 0 -> 1 over the steps after warm-up (clipped so it never exceeds 1).
         progress = (step - self.warmup_steps) / max(1, self.total_steps - self.warmup_steps)
         cosine = 0.5 * self.lr_max * (1 + ops.cos(math.pi * ops.clip(progress, 0.0, 1.0)))
         warmup = self.lr_start + (self.lr_max - self.lr_start) * step / max(1, self.warmup_steps)
+        # Both branches are computed; `where` picks one (graph-friendly, no Python if on a tensor).
         return ops.where(step < self.warmup_steps, warmup, cosine)
 
     def get_config(self):
+        """Constructor arguments, so Keras can serialise / reload the schedule with the model."""
         return {"lr_start": self.lr_start, "lr_max": self.lr_max,
                 "warmup_steps": self.warmup_steps, "total_steps": self.total_steps}
 
 
 def build_model():
+    """Augmentation -> 4x4 patchify conv -> 4 stages of ShiftViT blocks (with patch merging) -> pooled classifier.
+
+    Returns a Keras model mapping (batch, 32, 32, 3) uint8-range images to (batch, 10) logits.
+    """
     augmentation = keras.Sequential([
         layers.Resizing(IMAGE_SIZE + 4, IMAGE_SIZE + 4),
         layers.RandomCrop(IMAGE_SIZE, IMAGE_SIZE),
@@ -177,6 +192,7 @@ def build_model():
 
 
 def main():
+    """Train ShiftViT on 40k CIFAR-10 images (10k held out for validation), evaluate on the test set, save results."""
     set_seed(42)
     (x_train, y_train), (x_test, y_test) = load_cifar("cifar10")
     x_train, y_train, x_val, y_val = x_train[:40000], y_train[:40000], x_train[40000:], y_train[40000:]
@@ -184,6 +200,7 @@ def main():
         x_train, y_train, x_val, y_val = x_train[:2048], y_train[:2048], x_val[:512], y_val[:512]
         x_test, y_test = x_test[:512], y_test[:512]
 
+    # Optimizer steps over the whole run; the first 15 % are linear warm-up.
     total_steps = math.ceil(len(x_train) / BATCH_SIZE) * EPOCHS
     schedule = WarmUpCosine(LR_START, LR_MAX, int(0.15 * total_steps), total_steps)
 

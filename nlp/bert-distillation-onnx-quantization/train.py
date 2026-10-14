@@ -31,7 +31,6 @@ import json
 import os
 import platform
 import sys
-import time
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
 
@@ -47,6 +46,8 @@ from transformers import (
     TrainingArguments,
 )
 
+from common.benchmark import latency
+from common.distillation import distillation_loss
 from common.utils import Timer, results_dir, save_results, set_seed
 
 PROJECT = "10_bert_distillation_onnx_quantization"
@@ -57,11 +58,17 @@ TEACHER, STUDENT = "bert-base-uncased", "distilbert-base-uncased"
 N_EVAL_CPU = 200 if QUICK else 2000          # test reviews used to measure accuracy of every CPU variant
 BENCH_RUNS = 20 if QUICK else 200
 TEMPERATURE, ALPHA = 2.0, 0.5
+# Mixed precision: bf16 on Ampere+ GPUs, fp16 on older ones (e.g. T4), fp32 on CPU.
 FP16 = torch.cuda.is_available() and not torch.cuda.is_bf16_supported()
 BF16 = torch.cuda.is_available() and torch.cuda.is_bf16_supported()
 
 
 def train_args(name, epochs):
+    """Shared TrainingArguments for the teacher and both students.
+
+    Students use a slightly higher learning rate (3e-5) than the teacher (2e-5).
+    remove_unused_columns=False lets the extra `teacher_logits` column reach the collator.
+    """
     return TrainingArguments(
         output_dir=os.path.join(OUT, name), num_train_epochs=epochs, learning_rate=3e-5 if "student" in name else 2e-5,
         per_device_train_batch_size=32, per_device_eval_batch_size=128, warmup_steps=0.06, weight_decay=0.01,
@@ -70,6 +77,7 @@ def train_args(name, epochs):
 
 
 def accuracy_metric(eval_pred):
+    """Accuracy from the Trainer's (logits, labels) evaluation output."""
     logits, labels = eval_pred
     return {"accuracy": float((np.argmax(logits, -1) == labels).mean())}
 
@@ -78,19 +86,21 @@ class DistillationTrainer(Trainer):
     """Trainer whose loss mixes the true labels with the teacher's softened predictions."""
 
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
+        """Distillation loss when the batch carries teacher logits, plain cross-entropy otherwise.
+
+        See `common/distillation.py` for the formula.
+        """
         teacher_logits = inputs.pop("teacher_logits", None)   # absent at evaluation time
         outputs = model(**inputs)
-        hard = F.cross_entropy(outputs.logits, inputs["labels"])
         if teacher_logits is None:
+            hard = F.cross_entropy(outputs.logits, inputs["labels"])
             return (hard, outputs) if return_outputs else hard
-        soft = F.kl_div(F.log_softmax(outputs.logits / TEMPERATURE, -1),
-                        F.softmax(teacher_logits / TEMPERATURE, -1),
-                        reduction="batchmean") * TEMPERATURE ** 2   # T^2 keeps gradient scale comparable
-        loss = ALPHA * hard + (1 - ALPHA) * soft
+        loss = distillation_loss(outputs.logits, teacher_logits, inputs["labels"], TEMPERATURE, ALPHA)
         return (loss, outputs) if return_outputs else loss
 
 
 def main():
+    """Teacher -> plain student -> distilled student -> ONNX export + int8 quantization -> CPU benchmark and report."""
     set_seed(42)
     torch.manual_seed(42)
     imdb = load_dataset("stanfordnlp/imdb")
@@ -100,7 +110,11 @@ def main():
     epochs = 1 if QUICK else 2
     tok = AutoTokenizer.from_pretrained(TEACHER)   # BERT and DistilBERT share the same WordPiece vocab
     tok.model_input_names = ["input_ids", "attention_mask"]  # DistilBERT has no token_type_ids input
-    enc = lambda b: tok(b["text"], truncation=True, max_length=MAX_LEN)
+
+    def enc(b):
+        """Tokenize a batch of reviews (truncate only; padding happens per batch in the collator)."""
+        return tok(b["text"], truncation=True, max_length=MAX_LEN)
+
     train_tok = train.map(enc, batched=True, remove_columns=["text"])
     test_tok = test.map(enc, batched=True, remove_columns=["text"])
     collator = DataCollatorWithPadding(tok)
@@ -129,7 +143,9 @@ def main():
 
     # ---- 2b) Student WITH distillation ---------------------------------------
     student = AutoModelForSequenceClassification.from_pretrained(STUDENT, num_labels=2)
+
     def distill_collator(features):
+        """Pad tokenizer fields with the standard collator and add the teacher logits as a float tensor."""
         # The padding collator only keeps tokenizer fields, so carry the teacher logits separately.
         if "teacher_logits" not in features[0]:          # evaluation batches
             return collator(features)
@@ -207,38 +223,34 @@ def quantize(fp32_path):
     return int8_path
 
 
-def latency(fn, runs):
-    for _ in range(10):      # warm-up: caches, thread pools, lazy initialisation
-        fn()
-    ts = []
-    for _ in range(runs):
-        s = time.perf_counter()
-        fn()
-        ts.append((time.perf_counter() - s) * 1000)
-    return float(np.percentile(ts, 50)), float(np.percentile(ts, 95))
-
-
 def bench_torch(name, model, tok, texts, labels):
+    """Latency (batch 1, 128 tokens), size and accuracy of a PyTorch model on CPU."""
+    # Latency is measured on one review padded to exactly 128 tokens (a typical online request).
     one = tok([texts[0]], return_tensors="pt", truncation=True, padding="max_length", max_length=128)
-    with torch.inference_mode():
+    with torch.inference_mode():   # like no_grad, plus skips autograd bookkeeping entirely
         p50, p95 = latency(lambda: model(**one), BENCH_RUNS)
         preds = []
         for i in range(0, len(texts), 32):
             b = tok(texts[i:i + 32], return_tensors="pt", truncation=True, padding=True, max_length=MAX_LEN)
             preds += model(**b).logits.argmax(-1).tolist()
-    size = sum(p.numel() * p.element_size() for p in model.parameters()) / 2**20
+    size = sum(p.numel() * p.element_size() for p in model.parameters()) / 2**20   # MB of weights in memory
     return {"variant": name, "latency_ms_p50": p50, "latency_ms_p95": p95, "size_mb": size,
             "accuracy": float((np.array(preds) == labels).mean())}
 
 
 def bench_onnx(name, path, tok, texts, labels):
+    """Latency (batch 1, 128 tokens), file size and accuracy of an ONNX model under ONNX Runtime on CPU."""
     import onnxruntime as ort
 
     opts = ort.SessionOptions()
     opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL   # operator fusion
     opts.intra_op_num_threads = os.cpu_count()
     sess = ort.InferenceSession(path, opts, providers=["CPUExecutionProvider"])
-    feed = lambda enc: {"input_ids": enc["input_ids"].astype("int64"), "attention_mask": enc["attention_mask"].astype("int64")}
+
+    def feed(enc):
+        """ONNX Runtime wants a dict of int64 NumPy arrays keyed by the graph's input names."""
+        return {"input_ids": enc["input_ids"].astype("int64"), "attention_mask": enc["attention_mask"].astype("int64")}
+
     one = feed(tok([texts[0]], return_tensors="np", truncation=True, padding="max_length", max_length=128))
     p50, p95 = latency(lambda: sess.run(None, one), BENCH_RUNS)
     preds = []
@@ -250,6 +262,7 @@ def bench_onnx(name, path, tok, texts, labels):
 
 
 def write_report(rows, teacher_acc, plain_acc, distilled_acc, times):
+    """Write benchmark.json, a Markdown table (benchmark.md) and a latency bar chart (latency.png)."""
     out = results_dir(PROJECT)
     json.dump({"rows": rows, "cpu": platform.processor() or platform.machine(), "threads": os.cpu_count(),
                "gpu_accuracy": {"teacher": teacher_acc, "student_plain": plain_acc, "student_distilled": distilled_acc},

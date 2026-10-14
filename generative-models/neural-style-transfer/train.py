@@ -56,11 +56,13 @@ STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 
 
 def fetch_style(name):
+    """Download a public-domain painting from Wikimedia Commons (800 px wide) as an RGB PIL image."""
     req = urllib.request.Request(WIKI.format(STYLES[name]), headers={"User-Agent": "portfolio-research/1.0"})
     return Image.open(io.BytesIO(urllib.request.urlopen(req, timeout=60).read())).convert("RGB")
 
 
 def content_images():
+    """Three public-domain / CC0 content photos bundled with scikit-image."""
     from skimage import data
 
     return {"astronaut": Image.fromarray(data.astronaut()), "coffee": Image.fromarray(data.coffee()),
@@ -68,6 +70,7 @@ def content_images():
 
 
 def to_tensor(img, size):
+    """PIL image -> (1, 3, H, W) float tensor in [0, 1], resized to `size` px wide (aspect ratio kept)."""
     img = img.resize((size, int(size * img.height / img.width)), Image.LANCZOS)
     x = torch.from_numpy(np.asarray(img, dtype=np.float32) / 255.0).permute(2, 0, 1)[None]
     return x.contiguous().to(DEVICE)          # L-BFGS flattens gradients with .view(), which needs contiguous memory
@@ -83,6 +86,8 @@ class VGGFeatures(torch.nn.Module):
         self.body = vgg19(weights=VGG19_Weights.IMAGENET1K_V1).features.eval().to(DEVICE)
         for p in self.body.parameters():
             p.requires_grad_(False)
+        # torchvision's VGG is an unnamed nn.Sequential; recreate the paper's layer names
+        # (conv{block}_{index}, relu..., pool{block}) so layers can be picked by name.
         names, block, conv = [], 1, 0
         for layer in self.body:
             if isinstance(layer, torch.nn.Conv2d):
@@ -96,7 +101,8 @@ class VGGFeatures(torch.nn.Module):
         self.names = names
 
     def forward(self, x):
-        x = (x - MEAN.to(x.device)) / STD.to(x.device)
+        """Return {layer_name: activation} for every layer up to conv5_1 (the deepest one we use)."""
+        x = (x - MEAN.to(x.device)) / STD.to(x.device)          # the ImageNet normalisation VGG was trained with
         out = {}
         for name, layer in zip(self.names, self.body):
             x = layer(x)
@@ -107,24 +113,36 @@ class VGGFeatures(torch.nn.Module):
 
 
 def gram(f):
+    """Gram matrix of a (1, C, H, W) feature map: (C, C) channel co-activations / (C*H*W).
+
+    Summing over all positions throws away *where* features occur and keeps
+    *which features occur together* - that is the "style". The normalisation
+    makes layers of different sizes comparable.
+    """
     b, c, h, w = f.shape
-    f = f.view(c, h * w)
+    f = f.view(c, h * w)                                       # batch size is 1 here
     return f @ f.t() / (c * h * w)
 
 
 def stylize(vgg, content, style, style_weight=1e6, tv_weight=1e-5, steps=STEPS):
+    """Optimise the pixels of a copy of `content` so it keeps the content features but takes on the style's Gram matrices.
+
+    Returns (stylised image tensor, seconds, per-evaluation [content_loss, style_loss] history).
+    """
     with torch.no_grad():
         c_feats = vgg(content)
-        s_grams = {l: gram(f) for l, f in vgg(style).items() if l in STYLE_LAYERS}
+        s_grams = {name: gram(f) for name, f in vgg(style).items() if name in STYLE_LAYERS}   # fixed targets
     x = content.clone().requires_grad_(True)        # start from the photo -> keeps structure, faster
     opt = torch.optim.LBFGS([x], max_iter=steps, line_search_fn="strong_wolfe")
     history = []
 
     def closure():
+        """Re-evaluate the loss and its gradient; L-BFGS calls this several times per step (line search)."""
         opt.zero_grad()
-        feats = vgg(x.clamp(0, 1))
+        feats = vgg(x.clamp(0, 1))                             # evaluate on a valid image, optimise the raw pixels
         c_loss = F.mse_loss(feats[CONTENT_LAYER], c_feats[CONTENT_LAYER])
-        s_loss = sum(F.mse_loss(gram(feats[l]), s_grams[l]) for l in STYLE_LAYERS) / len(STYLE_LAYERS)
+        s_loss = sum(F.mse_loss(gram(feats[name]), s_grams[name]) for name in STYLE_LAYERS) / len(STYLE_LAYERS)
+        # Total variation: mean absolute difference between neighbouring pixels -> penalises speckle noise.
         tv = (x[..., 1:, :] - x[..., :-1, :]).abs().mean() + (x[..., :, 1:] - x[..., :, :-1]).abs().mean()
         loss = c_loss + style_weight * s_loss + tv_weight * tv * 1e3
         loss.backward()
@@ -132,16 +150,19 @@ def stylize(vgg, content, style, style_weight=1e6, tv_weight=1e-5, steps=STEPS):
         return loss
 
     start = time.time()
-    opt.step(closure)
-    torch.cuda.synchronize() if DEVICE == "cuda" else None
+    opt.step(closure)                               # a single step = up to `steps` L-BFGS iterations
+    if DEVICE == "cuda":
+        torch.cuda.synchronize()                    # wait for the GPU before reading the clock
     return x.detach().clamp(0, 1), time.time() - start, history
 
 
 def to_pil(x):
+    """(1, 3, H, W) tensor in [0, 1] -> PIL image."""
     return Image.fromarray((x[0].permute(1, 2, 0).cpu().numpy() * 255).astype(np.uint8))
 
 
 def main():
+    """Stylise every content x style pair, run a style-weight sweep, save figures and timings."""
     import matplotlib
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
@@ -162,16 +183,20 @@ def main():
     fig, axes = plt.subplots(len(contents), len(styles) + 1, figsize=(3.2 * (len(styles) + 1), 3.2 * len(contents)))
     for i, (cname, cimg) in enumerate(contents.items()):
         c = to_tensor(cimg, SIZE)
-        axes[i, 0].imshow(to_pil(c)); axes[i, 0].set_title(f"content: {cname}", fontsize=9)
+        axes[i, 0].imshow(to_pil(c))
+        axes[i, 0].set_title(f"content: {cname}", fontsize=9)
         for j, (sname, simg) in enumerate(styles.items()):
             s = to_tensor(simg, SIZE)
             y, secs, hist = stylize(vgg, c, s)
             timings[f"{cname}+{sname}"] = secs
             to_pil(y).save(os.path.join(out, f"{cname}_{sname}.jpg"), quality=90)
-            axes[i, j + 1].imshow(to_pil(y)); axes[i, j + 1].set_title(f"{sname} ({secs:.1f}s)", fontsize=9)
+            axes[i, j + 1].imshow(to_pil(y))
+            axes[i, j + 1].set_title(f"{sname} ({secs:.1f}s)", fontsize=9)
     for ax in axes.flat:
         ax.axis("off")
-    fig.tight_layout(); fig.savefig(os.path.join(out, "style_grid.jpg"), dpi=80); plt.close(fig)
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "style_grid.jpg"), dpi=80)
+    plt.close(fig)
 
     # 2) content-vs-style trade-off for one pair
     c, s = to_tensor(contents["astronaut"], SIZE), to_tensor(next(iter(styles.values())), SIZE)
@@ -179,14 +204,22 @@ def main():
     fig, axes = plt.subplots(1, len(weights), figsize=(3.2 * len(weights), 3.4))
     for ax, w in zip(axes, weights):
         y, _, _ = stylize(vgg, c, s, style_weight=w)
-        ax.imshow(to_pil(y)); ax.set_title(f"style weight {w:.0e}", fontsize=9); ax.axis("off")
-    fig.tight_layout(); fig.savefig(os.path.join(out, "style_weight_sweep.jpg"), dpi=80); plt.close(fig)
+        ax.imshow(to_pil(y))
+        ax.set_title(f"style weight {w:.0e}", fontsize=9)
+        ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "style_weight_sweep.jpg"), dpi=80)
+    plt.close(fig)
 
     # thumbnails of the style images (public domain) for the README
     fig, axes = plt.subplots(1, len(styles), figsize=(3 * len(styles), 3))
     for ax, (n, im) in zip(np.atleast_1d(axes), styles.items()):
-        ax.imshow(im); ax.set_title(n, fontsize=9); ax.axis("off")
-    fig.tight_layout(); fig.savefig(os.path.join(out, "styles.jpg"), dpi=70); plt.close(fig)
+        ax.imshow(im)
+        ax.set_title(n, fontsize=9)
+        ax.axis("off")
+    fig.tight_layout()
+    fig.savefig(os.path.join(out, "styles.jpg"), dpi=70)
+    plt.close(fig)
 
     metrics = {"resolution": SIZE, "lbfgs_steps": STEPS, "pairs": len(timings),
                "mean_seconds_per_image": float(np.mean(list(timings.values()))),

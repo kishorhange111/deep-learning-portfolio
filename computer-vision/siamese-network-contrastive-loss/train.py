@@ -50,6 +50,7 @@ def make_pairs(x, y):
     by_digit = [np.where(y == d)[0] for d in range(10)]
     pairs, labels = [], []
     for i in range(len(x)):
+        # Positive: any image of the same digit (can occasionally be the image itself).
         same = random.choice(by_digit[y[i]])
         pairs.append([x[i], x[same]])
         labels.append(0.0)
@@ -74,12 +75,19 @@ def embedding_network():
 
 
 def euclidean_distance(vectors):
+    """Distance ||a - b|| between the two embeddings of each pair; returns shape (batch, 1)."""
     a, b = vectors
     # max(..., epsilon) avoids sqrt(0), whose gradient is infinite.
     return ops.sqrt(ops.maximum(ops.sum(ops.square(a - b), axis=1, keepdims=True), keras.backend.epsilon()))
 
 
 def contrastive_loss(y_true, d):
+    """Contrastive loss (Hadsell et al., 2006) averaged over the batch.
+
+    y_true = 0 (same digit): loss d^2 pulls the pair together.
+    y_true = 1 (different):  loss max(MARGIN - d, 0)^2 pushes it apart, but only
+    until the distance reaches MARGIN - pairs that are already far apart cost nothing.
+    """
     return ops.mean((1 - y_true) * ops.square(d) + y_true * ops.square(ops.maximum(MARGIN - d, 0)))
 
 
@@ -89,6 +97,7 @@ def pair_accuracy(y_true, d):
 
 
 def build_model():
+    """Return (siamese_model, embedding_network); the siamese model outputs the distance between two images."""
     embed = embedding_network()
     a, b = layers.Input((28, 28, 1)), layers.Input((28, 28, 1))
     dist = layers.Lambda(euclidean_distance, output_shape=(1,))([embed(a), embed(b)])  # same `embed` twice = shared weights
@@ -96,9 +105,11 @@ def build_model():
 
 
 def main():
+    """Build MNIST pairs, train with contrastive loss, report test pair accuracy and save an embedding plot."""
     set_seed(42)
-    random.seed(42)
+    random.seed(42)   # make_pairs uses Python's `random`
     (x_train, y_train), (x_test, y_test) = keras.datasets.mnist.load_data()
+    # Scale pixels to [0, 1] and add the channel axis: (N, 28, 28) -> (N, 28, 28, 1).
     x_train, x_test = (x_train / 255.0).astype("float32")[..., None], (x_test / 255.0).astype("float32")[..., None]
     x_val, y_val = x_train[50000:], y_train[50000:]
     x_train, y_train = x_train[:50000], y_train[:50000]
@@ -140,8 +151,8 @@ def save_embedding_plot(embed, x, y):
     import matplotlib.pyplot as plt
 
     e = embed.predict(x, verbose=0)
-    e = e - e.mean(0)
-    _, _, vt = np.linalg.svd(e, full_matrices=False)
+    e = e - e.mean(0)                                   # PCA = SVD of the centred data
+    _, _, vt = np.linalg.svd(e, full_matrices=False)    # rows of vt = principal directions
     xy = e @ vt[:2].T
     fig, ax = plt.subplots(figsize=(6, 5))
     sc = ax.scatter(xy[:, 0], xy[:, 1], c=y, cmap="tab10", s=4)

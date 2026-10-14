@@ -62,6 +62,7 @@ BATCH = 32
 
 
 def main():
+    """Train a TF-IDF baseline and fine-tune BERT on IMDB; save test accuracy / F1, sample predictions and the loss curve."""
     set_seed(42)
     torch.manual_seed(42)
     imdb = load_dataset("stanfordnlp/imdb")
@@ -70,6 +71,7 @@ def main():
         train, test = train.select(range(1000)), test.select(range(500))
 
     # ---- 1) Classical baseline: bag-of-words TF-IDF + logistic regression ----
+    # Unigrams + bigrams ("not good"), 50k most frequent n-grams, log-scaled term frequencies.
     tfidf = TfidfVectorizer(max_features=50000, ngram_range=(1, 2), sublinear_tf=True)
     xtr, xte = tfidf.fit_transform(train["text"]), tfidf.transform(test["text"])
     clf = LogisticRegression(max_iter=2000, C=4.0).fit(xtr, train["label"])
@@ -82,6 +84,7 @@ def main():
     tok = AutoTokenizer.from_pretrained(MODEL)
 
     def tokenize(batch):
+        """WordPiece-tokenize a batch of reviews (adds [CLS] / [SEP], truncates to MAX_LEN)."""
         # Truncate only; padding is done per batch by the collator ("dynamic padding").
         return tok(batch["text"], truncation=True, max_length=MAX_LEN)
 
@@ -93,6 +96,7 @@ def main():
         MODEL, num_labels=2, id2label={0: "negative", 1: "positive"}, label2id={"negative": 0, "positive": 1})
 
     def metrics(eval_pred):
+        """Accuracy and F1 from the Trainer's (logits, labels) evaluation output."""
         logits, labels = eval_pred
         pred = np.argmax(logits, axis=-1)
         return {"accuracy": accuracy_score(labels, pred), "f1": f1_score(labels, pred)}
@@ -106,7 +110,7 @@ def main():
         per_device_eval_batch_size=128,
         warmup_steps=0.06,              # 6% linear warm-up, then linear decay (BERT recipe)
         weight_decay=0.01,
-        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),
+        bf16=torch.cuda.is_available() and torch.cuda.is_bf16_supported(),   # bf16 on Ampere+ GPUs (A100 / L4)
         eval_strategy="epoch",
         save_strategy="no",
         logging_steps=50,
@@ -138,7 +142,7 @@ def main():
 
     # Turn the Trainer log into per-epoch/per-step curves.
     logs = trainer.state.log_history
-    history = {"loss": [l["loss"] for l in logs if "loss" in l]}
+    history = {"loss": [entry["loss"] for entry in logs if "loss" in entry]}   # training-loss entries only
     with open(os.path.join(results_dir(PROJECT), "trainer_log.json"), "w") as f:
         json.dump(logs, f)
 

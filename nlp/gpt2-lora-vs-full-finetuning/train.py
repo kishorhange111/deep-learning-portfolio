@@ -61,7 +61,11 @@ def load_data():
     need = (NUM_BATCHES + VAL_BATCHES) * BATCH_SIZE
     texts = texts[:need]
     val, train = texts[:VAL_BATCHES * BATCH_SIZE], texts[VAL_BATCHES * BATCH_SIZE:]
-    make = lambda t: tf.data.Dataset.from_tensor_slices(t).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+
+    def make(t):
+        """Batch raw strings; the GPT-2 preprocessor tokenizes them inside the model."""
+        return tf.data.Dataset.from_tensor_slices(t).batch(BATCH_SIZE).prefetch(tf.data.AUTOTUNE)
+
     return make(train), make(val)
 
 
@@ -96,6 +100,7 @@ def run_one(mode):
     optimizer = keras.optimizers.AdamW(
         learning_rate=(5e-5 * ALPHA / RANK) if mode == "lora" else 5e-5,
         weight_decay=0.01, epsilon=1e-6, global_clipnorm=1.0)
+    # Standard practice: no weight decay on biases and LayerNorm scale/shift (gamma/beta).
     optimizer.exclude_from_weight_decay(var_names=["bias", "gamma", "beta"])
     model.compile(optimizer=optimizer,
                   loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
@@ -103,11 +108,12 @@ def run_one(mode):
 
     # Perplexity = exp(average cross-entropy): "how many words is the model choosing between".
     def perplexity():
+        """exp(mean validation cross-entropy) of the current model."""
         loss = model.evaluate(val_ds, verbose=0)[0]
         return float(np.exp(loss))
 
     ppl_before = perplexity()
-    tf.config.experimental.reset_memory_stats("GPU:0")
+    tf.config.experimental.reset_memory_stats("GPU:0")   # so "peak" measures training only
     start = time.time()
     history = model.fit(train_ds, epochs=1, verbose=2)
     minutes = (time.time() - start) / 60
@@ -130,6 +136,8 @@ def compare():
     from common.utils import results_dir, save_results
 
     for mode in ["full", "lora"]:
+        # A fresh process per mode, so the two runs' peak-GPU-memory numbers cannot mix
+        # (TensorFlow keeps the GPU memory it has allocated until the process exits).
         subprocess.run([sys.executable, __file__], env=dict(os.environ, LORA_MODE=mode), check=True)
     out = results_dir(PROJECT)
     full, lora = (json.load(open(os.path.join(out, f"{m}.json"))) for m in ["full", "lora"])
@@ -138,8 +146,8 @@ def compare():
         f.write("| metric | full fine-tuning | LoRA (r=4) |\n|---|---|---|\n")
         for key in ["trainable_params", "trainable_percent", "peak_gpu_memory_gb", "train_minutes",
                     "val_perplexity_before", "val_perplexity_after"]:
-            fmt = (lambda v: f"{v:,}") if key == "trainable_params" else (lambda v: f"{v:.2f}")
-            f.write(f"| {key} | {fmt(full[key])} | {fmt(lora[key])} |\n")
+            fmt = "{:,}" if key == "trainable_params" else "{:.2f}"   # thousands separators for counts
+            f.write(f"| {key} | {fmt.format(full[key])} | {fmt.format(lora[key])} |\n")
         f.write("\n### Sample generations (LoRA model)\n\n")
         for p, s in lora["samples"].items():
             f.write(f"- **{p}** -> {s!r}\n")
@@ -168,4 +176,8 @@ def compare():
 
 
 if __name__ == "__main__":
-    run_one(MODE) if MODE else compare()
+    # Parent process: compare() spawns one child per mode; each child runs run_one(LORA_MODE).
+    if MODE:
+        run_one(MODE)
+    else:
+        compare()

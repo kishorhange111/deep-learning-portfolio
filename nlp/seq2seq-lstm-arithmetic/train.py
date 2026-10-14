@@ -55,12 +55,14 @@ class CharacterTable:
         self.index = {c: i for i, c in enumerate(self.chars)}
 
     def encode(self, s, rows):
+        """One-hot encode string `s` into a (rows, n_chars) array; rows beyond len(s) stay all-zero."""
         x = np.zeros((rows, len(self.chars)), dtype="float32")
         for i, c in enumerate(s):
             x[i, self.index[c]] = 1
         return x
 
     def decode(self, x):
+        """Inverse of encode for a (rows, n_chars) array of one-hot vectors or probabilities (argmax per row)."""
         return "".join(self.chars[i] for i in x.argmax(-1))
 
 
@@ -68,25 +70,27 @@ def generate_data(rng):
     """50,000 unique random 'a+b' questions (a+b and b+a count as the same)."""
     questions, answers, seen = [], [], set()
     while len(questions) < TRAINING_SIZE:
+        # Two random numbers with 1..DIGITS digits each (leading zeros vanish in int()).
         a, b = (int("".join(rng.choice(list("0123456789")) for _ in range(rng.integers(1, DIGITS + 1))))
                 for _ in range(2))
         if (a, b) in seen or (b, a) in seen:
             continue
         seen.add((a, b))
-        q = f"{a}+{b}".ljust(MAXLEN)
+        q = f"{a}+{b}".ljust(MAXLEN)              # pad with spaces to a fixed length
         questions.append(q[::-1] if REVERSE else q)
         answers.append(str(a + b).ljust(DIGITS + 1))
     return questions, answers
 
 
 def main():
+    """Generate the data, train the encoder-decoder LSTM, report character and exact-match accuracy, save samples."""
     set_seed(42)
     rng = np.random.default_rng(42)
     table = CharacterTable(CHARS)
     questions, answers = generate_data(rng)
     x = np.stack([table.encode(q, MAXLEN) for q in questions])        # (50000, 7, 12)
     y = np.stack([table.encode(a, DIGITS + 1) for a in answers])      # (50000, 4, 12)
-    split = len(x) - len(x) // 10
+    split = len(x) - len(x) // 10                                     # last 10 % for validation
     x_train, x_val, y_train, y_val = x[:split], x[split:], y[:split], y[split:]
 
     model = keras.Sequential([

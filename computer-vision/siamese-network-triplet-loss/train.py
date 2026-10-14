@@ -43,6 +43,7 @@ import tensorflow as tf
 from keras import layers, ops
 from keras.applications import resnet
 
+from common.embeddings import triplet_batch_stats
 from common.utils import Timer, make_time_limit_callback, save_results, set_seed
 
 PROJECT = "06_siamese_triplet_resnet"
@@ -59,6 +60,7 @@ DRIVE_IDS = {"left": "1jvkbTr_giSP3Ru8OwGNCg6B4PvVbcO34", "right": "1EzBZUb_mh_D
 
 
 def download():
+    """Download and unzip the two halves of the dataset (left/ and right/ image folders) once, via gdown."""
     os.makedirs(DATA_DIR, exist_ok=True)
     for name, file_id in DRIVE_IDS.items():
         if not os.path.isdir(os.path.join(DATA_DIR, name)):
@@ -68,6 +70,7 @@ def download():
 
 
 def load_image(path):
+    """Read a JPEG into a float32 tensor in [0, 1], resized to TARGET_SHAPE."""
     img = tf.io.decode_jpeg(tf.io.read_file(path), channels=3)
     return tf.image.resize(tf.image.convert_image_dtype(img, tf.float32), TARGET_SHAPE)
 
@@ -78,7 +81,9 @@ def make_triplets():
     right = sorted(os.path.join(DATA_DIR, "right", f) for f in os.listdir(os.path.join(DATA_DIR, "right")))
     if QUICK:
         left, right = left[:400], right[:400]
-    rng = np.random.RandomState(32)
+    rng = np.random.RandomState(32)   # fixed seed -> the same triplets (and split) every run
+    # Negatives: a random sample from all images. A negative can by chance be the
+    # anchor's own pair - rare, and it matches the original example.
     negatives = np.array(left + right)
     rng.shuffle(negatives)
     negatives = negatives[:len(left)]
@@ -87,6 +92,7 @@ def make_triplets():
 
 
 def dataset(a, p, n, shuffle):
+    """tf.data pipeline of (anchor, positive, negative) image batches, decoded in parallel."""
     ds = tf.data.Dataset.from_tensor_slices((a, p, n))
     if shuffle:
         ds = ds.shuffle(2048, seed=42)
@@ -95,6 +101,11 @@ def dataset(a, p, n, shuffle):
 
 
 def build_embedding():
+    """ResNet50 (ImageNet weights) + a 512-256-256 head -> 256-d embedding.
+
+    Only conv5 and the head are trainable; earlier stages keep their generic
+    ImageNet features, which needs much less data than training from scratch.
+    """
     base = resnet.ResNet50(weights="imagenet", input_shape=TARGET_SHAPE + (3,), include_top=False)
     x = layers.Flatten()(base.output)
     x = layers.BatchNormalization()(layers.Dense(512, activation="relu")(x))
@@ -120,17 +131,22 @@ class SiameseModel(keras.Model):
         self.loss_tracker = keras.metrics.Mean(name="loss")
 
     def call(self, data):
+        """Keras forward pass: (anchor, positive, negative) -> (d(A, P), d(A, N))."""
         return self.distances(data)
 
     def distances(self, data, training=False):
+        """Squared Euclidean distances anchor-positive and anchor-negative for a batch of triplets."""
+        # Images are in [0, 1]; ResNet's preprocess_input expects 0-255 pixels (it subtracts ImageNet means).
         a, p, n = (self.embedding(resnet.preprocess_input(x * 255.0), training=training) for x in data)
         return ops.sum(ops.square(a - p), -1), ops.sum(ops.square(a - n), -1)
 
     def _loss(self, data, training):
+        """Triplet loss max(d(A,P) - d(A,N) + margin, 0), averaged over the batch."""
         ap, an = self.distances(data, training)
         return ops.mean(ops.maximum(ap - an + self.margin, 0.0))
 
     def train_step(self, data):
+        """One optimisation step on a batch of triplets (called by model.fit)."""
         # Standard custom training loop: forward pass under a GradientTape,
         # compute gradients of the loss w.r.t. the trainable weights, apply them.
         with tf.GradientTape() as tape:
@@ -141,11 +157,13 @@ class SiameseModel(keras.Model):
         return {"loss": self.loss_tracker.result()}
 
     def test_step(self, data):
+        """Validation loss on a batch of triplets (called by model.fit / model.evaluate)."""
         self.loss_tracker.update_state(self._loss(data, training=False))
         return {"loss": self.loss_tracker.result()}
 
     @property
     def metrics(self):
+        """Metrics Keras resets at the start of every epoch."""
         return [self.loss_tracker]
 
 
@@ -155,18 +173,18 @@ def evaluate(model, ds):
     cos_pos, cos_neg = [], []
     for a, p, n in ds:
         ea, ep, en = (model.embedding(resnet.preprocess_input(x * 255.0), training=False).numpy() for x in (a, p, n))
-        dp, dn = ((ea - ep) ** 2).sum(-1), ((ea - en) ** 2).sum(-1)
-        correct += int((dp < dn).sum())
-        total += len(dp)
-        norm = lambda v: v / np.linalg.norm(v, axis=-1, keepdims=True)
-        cos_pos += list((norm(ea) * norm(ep)).sum(-1))
-        cos_neg += list((norm(ea) * norm(en)).sum(-1))
+        c, n_batch, cp, cn = triplet_batch_stats(ea, ep, en)
+        correct += c
+        total += n_batch
+        cos_pos += cp
+        cos_neg += cn
     return {"triplet_accuracy": correct / total,
             "cosine_anchor_positive": float(np.mean(cos_pos)),
             "cosine_anchor_negative": float(np.mean(cos_neg))}
 
 
 def main():
+    """Build triplets, measure the embedding before and after fine-tuning on the 20 % validation split, save results."""
     set_seed(42)
     download()
     a, p, n = make_triplets()
@@ -178,7 +196,7 @@ def main():
     model = SiameseModel(build_embedding(), MARGIN)
     model.compile(optimizer=keras.optimizers.Adam(1e-4))
 
-    before = evaluate(model, val_ds)
+    before = evaluate(model, val_ds)   # ImageNet features + random head: the baseline
     print("before fine-tuning:", before)
     with Timer() as t:
         history = model.fit(train_ds, validation_data=val_ds, epochs=EPOCHS,
