@@ -33,4 +33,17 @@ The Keras reference implementation reports 76.4 % top-1 after up to 100 epochs; 
 python computer-vision/shiftvit-attention-free-transformer/train.py                     # 40-min default budget
 TIME_LIMIT_MIN=120 python computer-vision/shiftvit-attention-free-transformer/train.py
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python computer-vision/shiftvit-attention-free-transformer/train.py   # smoke test on a tiny subset
+!python computer-vision/shiftvit-attention-free-transformer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `computer-vision/shiftvit-attention-free-transformer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by Aritra Roy Gosthipaty & Ritwik Raha (Apache-2.0), with the shift implemented via padding + slicing.

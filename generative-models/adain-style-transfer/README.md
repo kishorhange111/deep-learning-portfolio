@@ -44,3 +44,15 @@ Optimisation-based style transfer ([project 11](../../generative-models/neural-s
 pip install torch torchvision datasets scikit-image matplotlib
 python generative-models/adain-style-transfer/train.py        # 35-min budget on an L4
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA L4 (24 GB)** runtime (*Runtime → Change runtime type → L4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python generative-models/adain-style-transfer/train.py   # smoke test on a tiny subset
+!python generative-models/adain-style-transfer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `generative-models/adain-style-transfer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.

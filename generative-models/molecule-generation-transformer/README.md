@@ -42,4 +42,17 @@ The generated molecules reproduce the training distributions of drug-likeness, l
 pip install torch rdkit matplotlib
 python generative-models/molecule-generation-transformer/train.py        # 30-minute budget
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python generative-models/molecule-generation-transformer/train.py   # smoke test on a tiny subset
+!python generative-models/molecule-generation-transformer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `generative-models/molecule-generation-transformer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Data: ZINC-250k as released with Gómez-Bombarelli et al., 2018 (Automatic chemical design using a data-driven continuous representation of molecules).

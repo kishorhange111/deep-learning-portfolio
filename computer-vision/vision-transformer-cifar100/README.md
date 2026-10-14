@@ -38,4 +38,17 @@ The Keras reference implementation reports ~55 % top-1 after **100** epochs; thi
 python computer-vision/vision-transformer-cifar100/train.py                 # 40-min budget
 TIME_LIMIT_MIN=120 EPOCHS=100 python computer-vision/vision-transformer-cifar100/train.py
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python computer-vision/vision-transformer-cifar100/train.py   # smoke test on a tiny subset
+!python computer-vision/vision-transformer-cifar100/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `computer-vision/vision-transformer-cifar100/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by Khalid Salama (Apache-2.0).

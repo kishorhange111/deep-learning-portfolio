@@ -35,4 +35,17 @@ Input the *string* `"535+61"`, output the *string* `"596"`. The network is never
 ```bash
 python nlp/seq2seq-lstm-arithmetic/train.py   # ~7 min on a T4
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA T4 (16 GB)** runtime (*Runtime → Change runtime type → T4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python nlp/seq2seq-lstm-arithmetic/train.py   # smoke test on a tiny subset
+!python nlp/seq2seq-lstm-arithmetic/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `nlp/seq2seq-lstm-arithmetic/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example (Apache-2.0).

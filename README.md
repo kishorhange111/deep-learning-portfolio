@@ -1,5 +1,7 @@
 # Deep Learning Portfolio
 
+[![CI](https://github.com/kishorhange111/deep-learning-portfolio/actions/workflows/ci.yml/badge.svg)](https://github.com/kishorhange111/deep-learning-portfolio/actions/workflows/ci.yml)
+
 Fourteen end-to-end deep learning projects across **computer vision, NLP and generative models** — each trained on cloud GPUs, evaluated on held-out data and documented with its real results, trade-offs and failure cases.
 
 Every project is a single, heavily commented `train.py` written to be read top to bottom — *what problem, which idea, why this design, how it is measured* — plus a README and a `results/` folder with the actual metrics and figures.
@@ -35,13 +37,16 @@ Every project is a single, heavily commented `train.py` written to be read top t
 computer-vision/<project>/   train.py · README.md · results/
 nlp/<project>/               train.py · README.md · results/
 generative-models/<project>/ train.py · README.md · results/
-common/utils.py              shared helpers: seeding, GPU time budgets, metrics + plots
+common/                      shared helpers: seeding, GPU time budgets, metrics + plots (utils.py),
+                             caption parsing + BLEU, triplet metrics, distillation loss, latency benchmark
+tests/                       CPU-only pytest suite (Keras runs on the PyTorch backend; no GPU, no downloads)
 ```
 
 ## Engineering practices
 - **Reproducible:** fixed seeds and splits; every number in a README comes from that project's `results/metrics.json`.
 - **Cost-controlled:** every run has a wall-clock budget, so cloud-GPU spend is capped.
 - **Smoke-tested:** `QUICK=1` runs each full pipeline on tiny data before spending GPU hours.
+- **Unit-tested:** losses, tokenizers, metrics, layers and LR schedules are covered by CPU-only tests in CI.
 - **Honest evaluation:** held-out test sets, baselines where they matter, before/after comparisons, and failure cases shown — not hidden.
 
 ## Running a project
@@ -50,7 +55,16 @@ pip install -r requirements.txt
 python computer-vision/unet-pet-segmentation/train.py
 QUICK=1 RESULTS_DIR=/tmp/smoke python nlp/bert-sentiment-analysis/train.py   # quick smoke test
 ```
-Trained on Google Colab GPUs (NVIDIA A100, L4, T4) with Keras 3 / TensorFlow and PyTorch.
+Trained on Google Colab GPUs (NVIDIA A100, L4, T4) with Keras 3 / TensorFlow and PyTorch. Each project README has a **Run on Colab** section with the exact GPU type and commands used.
+
+## Development
+```bash
+pip install torch --index-url https://download.pytorch.org/whl/cpu
+pip install -r requirements-dev.txt
+ruff check .        # lint
+pytest              # unit tests: losses, tokenizers, metrics, layers, schedules - CPU only
+```
+CI (GitHub Actions) runs `ruff check`, byte-compiles every `train.py` and runs the test suite on every push.
 
 ## Credits
 Several projects re-implement or extend [Keras code examples](https://keras.io/examples/) (Apache-2.0) — some rewritten in PyTorch, all extended with additional evaluation, baselines and documentation. Original authors are credited in each project.

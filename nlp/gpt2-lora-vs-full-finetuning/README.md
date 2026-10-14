@@ -40,4 +40,17 @@ Sample generation (LoRA): *"Today I messed up by accidentally touching the wrong
 pip install keras-hub datasets
 python nlp/gpt2-lora-vs-full-finetuning/train.py        # runs both modes, ~10 min on an L4
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA L4 (24 GB)** runtime (*Runtime → Change runtime type → L4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python nlp/gpt2-lora-vs-full-finetuning/train.py   # smoke test on a tiny subset
+!python nlp/gpt2-lora-vs-full-finetuning/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `nlp/gpt2-lora-vs-full-finetuning/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by Abheesht Sharma & Matthew Watson (Apache-2.0). Data: Reddit TIFU (Kim et al., 2019).

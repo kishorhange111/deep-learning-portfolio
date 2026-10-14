@@ -41,3 +41,15 @@ Full 25k test set (GPU): teacher 92.26 % · DistilBERT on labels only 91.43 % ·
 pip install torch transformers datasets onnx onnxruntime onnxscript
 python nlp/bert-distillation-onnx-quantization/train.py
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA A100 40 GB** runtime (*Runtime → Change runtime type → A100 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python nlp/bert-distillation-onnx-quantization/train.py   # smoke test on a tiny subset
+!python nlp/bert-distillation-onnx-quantization/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `nlp/bert-distillation-onnx-quantization/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.

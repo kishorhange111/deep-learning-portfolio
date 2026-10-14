@@ -34,4 +34,17 @@ Before fine-tuning, all embeddings were bunched together (every pair ~0.6 simila
 pip install gdown
 python computer-vision/siamese-network-triplet-loss/train.py   # ~6 min on an L4
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA L4 (24 GB)** runtime (*Runtime → Change runtime type → L4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python computer-vision/siamese-network-triplet-loss/train.py   # smoke test on a tiny subset
+!python computer-vision/siamese-network-triplet-loss/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `computer-vision/siamese-network-triplet-loss/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by Hazem Essam & Santiago L. Valdarrama (Apache-2.0).

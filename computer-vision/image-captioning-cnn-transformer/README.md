@@ -48,4 +48,17 @@ Full table: [results/…/sample_captions.md](results/sample_captions.md)
 ```bash
 python computer-vision/image-captioning-cnn-transformer/train.py   # ~10 min on an L4 (incl. feature extraction)
 ```
+
+## Run on Colab
+Trained on **Google Colab Pro** with an **NVIDIA L4 (24 GB)** runtime (*Runtime → Change runtime type → L4 GPU*). In a notebook cell:
+
+```python
+!git clone https://github.com/kishorhange111/deep-learning-portfolio.git
+%cd deep-learning-portfolio
+!pip install -q -r requirements.txt
+!QUICK=1 RESULTS_DIR=/content/smoke python computer-vision/image-captioning-cnn-transformer/train.py   # smoke test on a tiny subset
+!python computer-vision/image-captioning-cnn-transformer/train.py                                      # full run (time-budgeted)
+```
+Results (`metrics.json`, plots, samples) are written to `computer-vision/image-captioning-cnn-transformer/results/` (or to `$RESULTS_DIR`); copy them to Google Drive before the runtime is recycled.
+
 Adapted from the Keras example by A_K_Nain (Apache-2.0). Dataset: Hodosh et al., 2013 (images not redistributed here).
