@@ -21,6 +21,7 @@ Dataset : CIFAR-10 - 60,000 32x32 images, 10 classes.
 Adapted from the Keras example by Aritra Roy Gosthipaty & Ritwik Raha (Apache-2.0):
 https://keras.io/examples/vision/shiftvit/
 """
+
 import math
 import os
 import sys
@@ -40,13 +41,13 @@ QUICK = os.environ.get("QUICK") == "1"
 # Hyper-parameters (same as the paper's "tiny" setting, scaled to CIFAR)
 # ---------------------------------------------------------------------------
 NUM_CLASSES = 10
-IMAGE_SIZE = 48                    # 32 -> resize 52 -> random crop 48
-PATCH_SIZE = 4                     # 48/4 = 12x12 tokens in stage 1
-PROJECTED_DIM = 96                 # channels in stage 1 (192, 384, 768 in later stages)
+IMAGE_SIZE = 48  # 32 -> resize 52 -> random crop 48
+PATCH_SIZE = 4  # 48/4 = 12x12 tokens in stage 1
+PROJECTED_DIM = 96  # channels in stage 1 (192, 384, 768 in later stages)
 BLOCKS_PER_STAGE = [2, 4, 8, 2]
-STOCHASTIC_DEPTH_RATE = 0.2        # max probability of skipping a whole residual block
+STOCHASTIC_DEPTH_RATE = 0.2  # max probability of skipping a whole residual block
 MLP_DROPOUT = 0.2
-NUM_DIV = 12                       # channels are split in 12 groups; 4 groups get shifted
+NUM_DIV = 12  # channels are split in 12 groups; 4 groups get shifted
 MLP_EXPAND = 2
 LR_START, LR_MAX = 1e-5, 1e-3
 WEIGHT_DECAY = 1e-4
@@ -74,10 +75,10 @@ class DropPath(layers.Layer):
         if not training or self.rate == 0.0:
             return x
         keep = 1.0 - self.rate
-        shape = (ops.shape(x)[0],) + (1,) * (len(x.shape) - 1)   # one coin flip per sample
+        shape = (ops.shape(x)[0],) + (1,) * (len(x.shape) - 1)  # one coin flip per sample
         # keep + U[0, 1) is >= 1 with probability `keep`, so floor() gives a 0/1 Bernoulli(keep) mask.
         mask = ops.floor(keep + keras.random.uniform(shape, seed=self.seed_gen))
-        return x / keep * mask                                   # rescale so the expected value is unchanged
+        return x / keep * mask  # rescale so the expected value is unchanged
 
 
 def shift(x, dy, dx):
@@ -86,7 +87,7 @@ def shift(x, dy, dx):
     # Pad one zero pixel on every side, then cut an h x w window offset by (dy, dx):
     # the content moves by (dy, dx) and the uncovered border is zero.
     padded = ops.pad(x, [[0, 0], [1, 1], [1, 1], [0, 0]])
-    return padded[:, 1 - dy:1 - dy + h, 1 - dx:1 - dx + w, :]
+    return padded[:, 1 - dy : 1 - dy + h, 1 - dx : 1 - dx + w, :]
 
 
 class ShiftViTBlock(layers.Layer):
@@ -101,24 +102,29 @@ class ShiftViTBlock(layers.Layer):
         c = input_shape[-1]
         self.group = c // NUM_DIV
         self.norm = layers.LayerNormalization(epsilon=1e-5)
-        self.mlp = keras.Sequential([
-            layers.Dense(c * MLP_EXPAND, activation="gelu"),
-            layers.Dropout(MLP_DROPOUT),
-            layers.Dense(c),
-            layers.Dropout(MLP_DROPOUT),
-        ])
+        self.mlp = keras.Sequential(
+            [
+                layers.Dense(c * MLP_EXPAND, activation="gelu"),
+                layers.Dropout(MLP_DROPOUT),
+                layers.Dense(c),
+                layers.Dropout(MLP_DROPOUT),
+            ]
+        )
 
     def call(self, x, training=False):
         """Shift 4 channel groups by one pixel (token mixing), then apply the residual MLP (channel mixing)."""
         g = self.group
         # The "token mixing" step: 4 channel groups move one pixel in 4 directions.
-        x = ops.concatenate([
-            shift(x[..., 0 * g:1 * g], 0, -1),   # left
-            shift(x[..., 1 * g:2 * g], 0, 1),    # right
-            shift(x[..., 2 * g:3 * g], -1, 0),   # up
-            shift(x[..., 3 * g:4 * g], 1, 0),    # down
-            x[..., 4 * g:],                      # the other 8/12 of channels stay in place
-        ], axis=-1)
+        x = ops.concatenate(
+            [
+                shift(x[..., 0 * g : 1 * g], 0, -1),  # left
+                shift(x[..., 1 * g : 2 * g], 0, 1),  # right
+                shift(x[..., 2 * g : 3 * g], -1, 0),  # up
+                shift(x[..., 3 * g : 4 * g], 1, 0),  # down
+                x[..., 4 * g :],  # the other 8/12 of channels stay in place
+            ],
+            axis=-1,
+        )
         # The "channel mixing" step: a per-pixel MLP with a residual connection.
         return x + self.drop_path(self.mlp(self.norm(x), training=training), training=training)
 
@@ -159,8 +165,12 @@ class WarmUpCosine(keras.optimizers.schedules.LearningRateSchedule):
 
     def get_config(self):
         """Constructor arguments, so Keras can serialise / reload the schedule with the model."""
-        return {"lr_start": self.lr_start, "lr_max": self.lr_max,
-                "warmup_steps": self.warmup_steps, "total_steps": self.total_steps}
+        return {
+            "lr_start": self.lr_start,
+            "lr_max": self.lr_max,
+            "warmup_steps": self.warmup_steps,
+            "total_steps": self.total_steps,
+        }
 
 
 def build_model():
@@ -168,12 +178,15 @@ def build_model():
 
     Returns a Keras model mapping (batch, 32, 32, 3) uint8-range images to (batch, 10) logits.
     """
-    augmentation = keras.Sequential([
-        layers.Resizing(IMAGE_SIZE + 4, IMAGE_SIZE + 4),
-        layers.RandomCrop(IMAGE_SIZE, IMAGE_SIZE),
-        layers.RandomFlip("horizontal"),
-        layers.Rescaling(1 / 255.0),
-    ], name="augmentation")
+    augmentation = keras.Sequential(
+        [
+            layers.Resizing(IMAGE_SIZE + 4, IMAGE_SIZE + 4),
+            layers.RandomCrop(IMAGE_SIZE, IMAGE_SIZE),
+            layers.RandomFlip("horizontal"),
+            layers.Rescaling(1 / 255.0),
+        ],
+        name="augmentation",
+    )
 
     inputs = keras.Input((32, 32, 3))
     x = augmentation(inputs)
@@ -208,14 +221,17 @@ def main():
     model.compile(
         optimizer=keras.optimizers.AdamW(learning_rate=schedule, weight_decay=WEIGHT_DECAY),
         loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-        metrics=[keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
-                 keras.metrics.SparseTopKCategoricalAccuracy(5, name="top5_accuracy")],
+        metrics=[
+            keras.metrics.SparseCategoricalAccuracy(name="accuracy"),
+            keras.metrics.SparseTopKCategoricalAccuracy(5, name="top5_accuracy"),
+        ],
     )
     model.summary()
 
     with Timer() as t:
         history = model.fit(
-            x_train, y_train,
+            x_train,
+            y_train,
             validation_data=(x_val, y_val),
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
@@ -229,9 +245,13 @@ def main():
     _, acc, top5 = model.evaluate(x_test, y_test, batch_size=BATCH_SIZE, verbose=0)
     save_results(
         PROJECT,
-        {"test_accuracy": acc, "test_top5_accuracy": top5,
-         "epochs_trained": len(history.history["loss"]),
-         "parameters": model.count_params(), "train_minutes": t.minutes},
+        {
+            "test_accuracy": acc,
+            "test_top5_accuracy": top5,
+            "epochs_trained": len(history.history["loss"]),
+            "parameters": model.count_params(),
+            "train_minutes": t.minutes,
+        },
         history.history,
         curves=("loss", "accuracy"),
     )

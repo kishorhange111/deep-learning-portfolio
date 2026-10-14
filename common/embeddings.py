@@ -4,6 +4,7 @@ NumPy helpers for evaluating embedding models (used by the triplet-loss project)
 All functions take plain arrays of shape (batch, dim), so they are framework-
 independent and unit-tested in `tests/test_embeddings.py`.
 """
+
 import numpy as np
 
 

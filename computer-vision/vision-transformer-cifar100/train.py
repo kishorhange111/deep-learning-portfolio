@@ -22,6 +22,7 @@ Dataset : CIFAR-100 - 60,000 32x32 colour images, 100 classes.
 Adapted from the Keras example by Khalid Salama (Apache-2.0):
 https://keras.io/examples/vision/image_classification_with_vision_transformer/
 """
+
 import os
 import sys
 
@@ -40,14 +41,14 @@ QUICK = os.environ.get("QUICK") == "1"  # QUICK=1 -> tiny run to test the pipeli
 # ---------------------------------------------------------------------------
 NUM_CLASSES = 100
 INPUT_SHAPE = (32, 32, 3)
-IMAGE_SIZE = 72                 # images are up-scaled 32 -> 72 so we get more patches
-PATCH_SIZE = 6                  # 72 / 6 = 12 patches per side
-NUM_PATCHES = (IMAGE_SIZE // PATCH_SIZE) ** 2   # 144 tokens per image
-PROJECTION_DIM = 64             # size of each token vector
-NUM_HEADS = 4                   # attention heads per layer
+IMAGE_SIZE = 72  # images are up-scaled 32 -> 72 so we get more patches
+PATCH_SIZE = 6  # 72 / 6 = 12 patches per side
+NUM_PATCHES = (IMAGE_SIZE // PATCH_SIZE) ** 2  # 144 tokens per image
+PROJECTION_DIM = 64  # size of each token vector
+NUM_HEADS = 4  # attention heads per layer
 TRANSFORMER_UNITS = [PROJECTION_DIM * 2, PROJECTION_DIM]  # MLP inside each block
 TRANSFORMER_LAYERS = 8
-MLP_HEAD_UNITS = [2048, 1024]   # classifier on top
+MLP_HEAD_UNITS = [2048, 1024]  # classifier on top
 LEARNING_RATE = 1e-3
 WEIGHT_DECAY = 1e-4
 BATCH_SIZE = 256
@@ -111,7 +112,7 @@ def build_model(x_train):
     # automatically switched off at evaluation time.
     augmentation = keras.Sequential(
         [
-            layers.Normalization(),                 # learns per-channel mean/std from training data
+            layers.Normalization(),  # learns per-channel mean/std from training data
             layers.Resizing(IMAGE_SIZE, IMAGE_SIZE),
             layers.RandomFlip("horizontal"),
             layers.RandomRotation(0.02),
@@ -131,10 +132,10 @@ def build_model(x_train):
         h = layers.LayerNormalization(epsilon=1e-6)(tokens)
         # Self-attention: query and value are the same token sequence, so every patch attends to every patch.
         h = layers.MultiHeadAttention(num_heads=NUM_HEADS, key_dim=PROJECTION_DIM, dropout=0.1)(h, h)
-        tokens2 = layers.Add()([h, tokens])                    # residual connection 1
+        tokens2 = layers.Add()([h, tokens])  # residual connection 1
         h = layers.LayerNormalization(epsilon=1e-6)(tokens2)
         h = mlp(h, TRANSFORMER_UNITS, dropout_rate=0.1)
-        tokens = layers.Add()([h, tokens2])                    # residual connection 2
+        tokens = layers.Add()([h, tokens2])  # residual connection 2
 
     # Classification head: flatten all tokens -> MLP -> 100 logits.
     x = layers.LayerNormalization(epsilon=1e-6)(tokens)
@@ -168,10 +169,11 @@ def main():
 
     with Timer() as t:
         history = model.fit(
-            x_train, y_train,
+            x_train,
+            y_train,
             batch_size=BATCH_SIZE,
             epochs=EPOCHS,
-            validation_split=0.1,                      # 10% of training data to watch over-fitting
+            validation_split=0.1,  # 10% of training data to watch over-fitting
             callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)],
             verbose=2,
         )

@@ -23,6 +23,7 @@ much faster learning (Zaremba & Sutskever, 2014, "Learning to Execute").
 Adapted from the Keras example by Smerity & others (Apache-2.0):
 https://keras.io/examples/nlp/addition_rnn/
 """
+
 import os
 import sys
 
@@ -38,10 +39,10 @@ PROJECT = "07_seq2seq_addition_lstm"
 QUICK = os.environ.get("QUICK") == "1"
 
 TRAINING_SIZE = 50000
-DIGITS = 3                      # numbers up to 999
+DIGITS = 3  # numbers up to 999
 REVERSE = True
-MAXLEN = DIGITS + 1 + DIGITS    # longest question: "999+999" = 7 chars
-CHARS = "0123456789+ "          # 12 symbols (space = padding)
+MAXLEN = DIGITS + 1 + DIGITS  # longest question: "999+999" = 7 chars
+CHARS = "0123456789+ "  # 12 symbols (space = padding)
 EPOCHS = 2 if QUICK else int(os.environ.get("EPOCHS", "40"))
 BATCH_SIZE = 32
 TIME_LIMIT_MIN = float(os.environ.get("TIME_LIMIT_MIN", "15"))
@@ -71,12 +72,13 @@ def generate_data(rng):
     questions, answers, seen = [], [], set()
     while len(questions) < TRAINING_SIZE:
         # Two random numbers with 1..DIGITS digits each (leading zeros vanish in int()).
-        a, b = (int("".join(rng.choice(list("0123456789")) for _ in range(rng.integers(1, DIGITS + 1))))
-                for _ in range(2))
+        a, b = (
+            int("".join(rng.choice(list("0123456789")) for _ in range(rng.integers(1, DIGITS + 1)))) for _ in range(2)
+        )
         if (a, b) in seen or (b, a) in seen:
             continue
         seen.add((a, b))
-        q = f"{a}+{b}".ljust(MAXLEN)              # pad with spaces to a fixed length
+        q = f"{a}+{b}".ljust(MAXLEN)  # pad with spaces to a fixed length
         questions.append(q[::-1] if REVERSE else q)
         answers.append(str(a + b).ljust(DIGITS + 1))
     return questions, answers
@@ -88,25 +90,33 @@ def main():
     rng = np.random.default_rng(42)
     table = CharacterTable(CHARS)
     questions, answers = generate_data(rng)
-    x = np.stack([table.encode(q, MAXLEN) for q in questions])        # (50000, 7, 12)
-    y = np.stack([table.encode(a, DIGITS + 1) for a in answers])      # (50000, 4, 12)
-    split = len(x) - len(x) // 10                                     # last 10 % for validation
+    x = np.stack([table.encode(q, MAXLEN) for q in questions])  # (50000, 7, 12)
+    y = np.stack([table.encode(a, DIGITS + 1) for a in answers])  # (50000, 4, 12)
+    split = len(x) - len(x) // 10  # last 10 % for validation
     x_train, x_val, y_train, y_val = x[:split], x[split:], y[:split], y[split:]
 
-    model = keras.Sequential([
-        layers.Input((MAXLEN, len(CHARS))),
-        layers.LSTM(128),                                  # encoder -> one 128-d "thought vector"
-        layers.RepeatVector(DIGITS + 1),                   # feed it to each of the 4 output steps
-        layers.LSTM(128, return_sequences=True),           # decoder
-        layers.Dense(len(CHARS), activation="softmax"),    # one character per step
-    ])
+    model = keras.Sequential(
+        [
+            layers.Input((MAXLEN, len(CHARS))),
+            layers.LSTM(128),  # encoder -> one 128-d "thought vector"
+            layers.RepeatVector(DIGITS + 1),  # feed it to each of the 4 output steps
+            layers.LSTM(128, return_sequences=True),  # decoder
+            layers.Dense(len(CHARS), activation="softmax"),  # one character per step
+        ]
+    )
     model.compile(loss="categorical_crossentropy", optimizer="adam", metrics=["accuracy"])
     model.summary()
 
     with Timer() as t:
-        history = model.fit(x_train, y_train, batch_size=BATCH_SIZE, epochs=EPOCHS,
-                            validation_data=(x_val, y_val),
-                            callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)], verbose=2)
+        history = model.fit(
+            x_train,
+            y_train,
+            batch_size=BATCH_SIZE,
+            epochs=EPOCHS,
+            validation_data=(x_val, y_val),
+            callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)],
+            verbose=2,
+        )
 
     # Character accuracy is what Keras reports; *exact-match* accuracy (every
     # digit of the answer right) is the honest metric for arithmetic.
@@ -123,9 +133,13 @@ def main():
 
     save_results(
         PROJECT,
-        {"val_char_accuracy": history.history["val_accuracy"][-1], "val_exact_match_accuracy": exact,
-         "epochs_trained": len(history.history["loss"]),
-         "parameters": model.count_params(), "train_minutes": t.minutes},
+        {
+            "val_char_accuracy": history.history["val_accuracy"][-1],
+            "val_exact_match_accuracy": exact,
+            "epochs_trained": len(history.history["loss"]),
+            "parameters": model.count_params(),
+            "train_minutes": t.minutes,
+        },
         history.history,
         curves=("loss", "accuracy"),
     )

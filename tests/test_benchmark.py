@@ -1,4 +1,5 @@
 """Tests for the latency helper (common/benchmark.py)."""
+
 from common.benchmark import latency
 
 

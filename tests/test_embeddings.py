@@ -1,4 +1,5 @@
 """Tests for the triplet evaluation helper (common/embeddings.py)."""
+
 import numpy as np
 import pytest
 
@@ -13,7 +14,7 @@ def test_l2_normalize():
 
 def test_triplet_batch_stats():
     ea = np.array([[1.0, 0.0], [1.0, 0.0]])
-    ep = np.array([[0.9, 0.1], [-1.0, 0.0]])      # first positive close, second far
+    ep = np.array([[0.9, 0.1], [-1.0, 0.0]])  # first positive close, second far
     en = np.array([[0.0, 1.0], [0.8, 0.2]])
     correct, total, cos_pos, cos_neg = triplet_batch_stats(ea, ep, en)
     assert (correct, total) == (1, 2)

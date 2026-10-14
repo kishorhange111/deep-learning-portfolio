@@ -21,6 +21,7 @@ IMPROVEMENTS over the Keras example:
 Images: content photos from scikit-image's sample data (public domain / CC0);
 style paintings are public-domain works from Wikimedia Commons.
 """
+
 import io
 import json
 import os
@@ -65,15 +66,18 @@ def content_images():
     """Three public-domain / CC0 content photos bundled with scikit-image."""
     from skimage import data
 
-    return {"astronaut": Image.fromarray(data.astronaut()), "coffee": Image.fromarray(data.coffee()),
-            "cat": Image.fromarray(data.chelsea())}
+    return {
+        "astronaut": Image.fromarray(data.astronaut()),
+        "coffee": Image.fromarray(data.coffee()),
+        "cat": Image.fromarray(data.chelsea()),
+    }
 
 
 def to_tensor(img, size):
     """PIL image -> (1, 3, H, W) float tensor in [0, 1], resized to `size` px wide (aspect ratio kept)."""
     img = img.resize((size, int(size * img.height / img.width)), Image.LANCZOS)
     x = torch.from_numpy(np.asarray(img, dtype=np.float32) / 255.0).permute(2, 0, 1)[None]
-    return x.contiguous().to(DEVICE)          # L-BFGS flattens gradients with .view(), which needs contiguous memory
+    return x.contiguous().to(DEVICE)  # L-BFGS flattens gradients with .view(), which needs contiguous memory
 
 
 class VGGFeatures(torch.nn.Module):
@@ -102,7 +106,7 @@ class VGGFeatures(torch.nn.Module):
 
     def forward(self, x):
         """Return {layer_name: activation} for every layer up to conv5_1 (the deepest one we use)."""
-        x = (x - MEAN.to(x.device)) / STD.to(x.device)          # the ImageNet normalisation VGG was trained with
+        x = (x - MEAN.to(x.device)) / STD.to(x.device)  # the ImageNet normalisation VGG was trained with
         out = {}
         for name, layer in zip(self.names, self.body):
             x = layer(x)
@@ -120,7 +124,7 @@ def gram(f):
     makes layers of different sizes comparable.
     """
     b, c, h, w = f.shape
-    f = f.view(c, h * w)                                       # batch size is 1 here
+    f = f.view(c, h * w)  # batch size is 1 here
     return f @ f.t() / (c * h * w)
 
 
@@ -131,15 +135,15 @@ def stylize(vgg, content, style, style_weight=1e6, tv_weight=1e-5, steps=STEPS):
     """
     with torch.no_grad():
         c_feats = vgg(content)
-        s_grams = {name: gram(f) for name, f in vgg(style).items() if name in STYLE_LAYERS}   # fixed targets
-    x = content.clone().requires_grad_(True)        # start from the photo -> keeps structure, faster
+        s_grams = {name: gram(f) for name, f in vgg(style).items() if name in STYLE_LAYERS}  # fixed targets
+    x = content.clone().requires_grad_(True)  # start from the photo -> keeps structure, faster
     opt = torch.optim.LBFGS([x], max_iter=steps, line_search_fn="strong_wolfe")
     history = []
 
     def closure():
         """Re-evaluate the loss and its gradient; L-BFGS calls this several times per step (line search)."""
         opt.zero_grad()
-        feats = vgg(x.clamp(0, 1))                             # evaluate on a valid image, optimise the raw pixels
+        feats = vgg(x.clamp(0, 1))  # evaluate on a valid image, optimise the raw pixels
         c_loss = F.mse_loss(feats[CONTENT_LAYER], c_feats[CONTENT_LAYER])
         s_loss = sum(F.mse_loss(gram(feats[name]), s_grams[name]) for name in STYLE_LAYERS) / len(STYLE_LAYERS)
         # Total variation: mean absolute difference between neighbouring pixels -> penalises speckle noise.
@@ -150,9 +154,9 @@ def stylize(vgg, content, style, style_weight=1e6, tv_weight=1e-5, steps=STEPS):
         return loss
 
     start = time.time()
-    opt.step(closure)                               # a single step = up to `steps` L-BFGS iterations
+    opt.step(closure)  # a single step = up to `steps` L-BFGS iterations
     if DEVICE == "cuda":
-        torch.cuda.synchronize()                    # wait for the GPU before reading the clock
+        torch.cuda.synchronize()  # wait for the GPU before reading the clock
     return x.detach().clamp(0, 1), time.time() - start, history
 
 
@@ -164,6 +168,7 @@ def to_pil(x):
 def main():
     """Stylise every content x style pair, run a style-weight sweep, save figures and timings."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -172,7 +177,7 @@ def main():
     vgg = VGGFeatures()
     contents = content_images()
     styles = {}
-    for name in (list(STYLES)[:2] if QUICK else STYLES):
+    for name in list(STYLES)[:2] if QUICK else STYLES:
         try:
             styles[name] = fetch_style(name)
         except Exception as e:
@@ -221,9 +226,13 @@ def main():
     fig.savefig(os.path.join(out, "styles.jpg"), dpi=70)
     plt.close(fig)
 
-    metrics = {"resolution": SIZE, "lbfgs_steps": STEPS, "pairs": len(timings),
-               "mean_seconds_per_image": float(np.mean(list(timings.values()))),
-               "gpu": torch.cuda.get_device_name(0) if DEVICE == "cuda" else "cpu"}
+    metrics = {
+        "resolution": SIZE,
+        "lbfgs_steps": STEPS,
+        "pairs": len(timings),
+        "mean_seconds_per_image": float(np.mean(list(timings.values()))),
+        "gpu": torch.cuda.get_device_name(0) if DEVICE == "cuda" else "cpu",
+    }
     json.dump({"metrics": metrics, "timings": timings}, open(os.path.join(out, "metrics.json"), "w"), indent=2)
     print(json.dumps(metrics, indent=2))
 

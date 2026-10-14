@@ -7,6 +7,7 @@ Every training script follows the same pattern so results are comparable:
     3. model.fit(..., callbacks=[TimeLimit(...)])   -> hard cap on GPU time
     4. save_results()        -> metrics.json, history.json and a training-curve PNG
 """
+
 import json
 import os
 import random
@@ -23,6 +24,7 @@ def set_seed(seed=42):
     os.environ["PYTHONHASHSEED"] = str(seed)
     try:
         import keras
+
         keras.utils.set_random_seed(seed)
     except ImportError:
         pass
@@ -71,8 +73,7 @@ def save_results(project, metrics, history=None, curves=("loss",)):
     curves  : which history keys to plot; the matching "val_<key>" is drawn too
     """
     out = results_dir(project)
-    metrics = {k: (round(float(v), 4) if isinstance(v, (int, float, np.floating)) else v)
-               for k, v in metrics.items()}
+    metrics = {k: (round(float(v), 4) if isinstance(v, (int, float, np.floating)) else v) for k, v in metrics.items()}
     with open(os.path.join(out, "metrics.json"), "w") as f:
         json.dump(metrics, f, indent=2)
     print(f"[{project}] metrics: {json.dumps(metrics)}")
@@ -84,6 +85,7 @@ def save_results(project, metrics, history=None, curves=("loss",)):
         json.dump(history, f)
 
     import matplotlib
+
     matplotlib.use("Agg")  # no screen on a cloud VM
     import matplotlib.pyplot as plt
 

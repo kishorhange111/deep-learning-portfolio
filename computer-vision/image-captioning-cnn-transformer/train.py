@@ -33,6 +33,7 @@ Dataset : Flickr8k - 8,091 images, 5 human captions each.
 Adapted from the Keras example by A_K_Nain (Apache-2.0):
 https://keras.io/examples/vision/image_captioning/
 """
+
 import math
 import os
 import sys
@@ -54,7 +55,7 @@ QUICK = os.environ.get("QUICK") == "1"
 
 IMAGE_SIZE = (299, 299)
 VOCAB_SIZE = 10000
-SEQ_LENGTH = 25            # max words per caption (incl. start/end markers)
+SEQ_LENGTH = 25  # max words per caption (incl. start/end markers)
 EMBED_DIM = 512
 FF_DIM = 512
 BATCH_SIZE = 64
@@ -107,7 +108,7 @@ def extract_features(image_files):
 
     ds = tf.data.Dataset.from_tensor_slices([os.path.join(img_dir, f) for f in image_files])
     ds = ds.map(load, num_parallel_calls=tf.data.AUTOTUNE).batch(128).prefetch(2)
-    feats = cnn.predict(ds, verbose=2)                           # (N, 10, 10, 1280)
+    feats = cnn.predict(ds, verbose=2)  # (N, 10, 10, 1280)
     return feats.reshape(len(image_files), -1, feats.shape[-1]).astype("float16")
 
 
@@ -128,7 +129,7 @@ class CaptionBatches(keras.utils.PyDataset):
         return math.ceil(len(self.order) / BATCH_SIZE)
 
     def __getitem__(self, i):
-        b = self.order[i * BATCH_SIZE:(i + 1) * BATCH_SIZE]
+        b = self.order[i * BATCH_SIZE : (i + 1) * BATCH_SIZE]
         tok = self.tokens[b]
         # Teacher forcing: input = words 0..n-2, target = words 1..n-1 (each position predicts the next word).
         return (self.feats[self.img_idx[b]].astype("float32"), tok[:, :-1]), tok[:, 1:]
@@ -206,7 +207,7 @@ def greedy_decode(model, feats, vectorizer, vocab):
         # Thanks to the causal mask, positions after t do not influence position t,
         # so the zero placeholders still to be filled in are harmless.
         logits = model.predict((feats.astype("float32"), tokens), batch_size=256, verbose=0)
-        tokens[:, t + 1] = logits[:, t].argmax(-1)   # greedy: always take the most likely word
+        tokens[:, t + 1] = logits[:, t].argmax(-1)  # greedy: always take the most likely word
     return [tokens_to_caption(row, vocab) for row in tokens]
 
 
@@ -215,16 +216,14 @@ def main():
     set_seed(42)
     download()
     captions = load_captions()
-    splits = {s: [f for f in read_split(f"Flickr_8k.{s}Images.txt") if f in captions]
-              for s in ["train", "dev", "test"]}
+    splits = {s: [f for f in read_split(f"Flickr_8k.{s}Images.txt") if f in captions] for s in ["train", "dev", "test"]}
     if QUICK:
         splits = {k: v[:300] for k, v in splits.items()}
     print({k: len(v) for k, v in splits.items()})
 
     # Vocabulary built from TRAINING captions only (no information leak from test data).
     # standardize=None: captions are already cleaned; id 0 = padding, id 1 = out-of-vocabulary.
-    vectorizer = layers.TextVectorization(max_tokens=VOCAB_SIZE, output_sequence_length=SEQ_LENGTH,
-                                          standardize=None)
+    vectorizer = layers.TextVectorization(max_tokens=VOCAB_SIZE, output_sequence_length=SEQ_LENGTH, standardize=None)
     vectorizer.adapt([c for f in splits["train"] for c in captions[f]])
     vocab = vectorizer.get_vocabulary()
 
@@ -232,7 +231,7 @@ def main():
     for split, files in splits.items():
         print(f"extracting CNN features for {split} ({len(files)} images)")
         feats[split] = extract_features(files)
-        img_idx = np.repeat(np.arange(len(files)), 5)                      # 5 captions per image
+        img_idx = np.repeat(np.arange(len(files)), 5)  # 5 captions per image
         tokens = vectorizer([c for f in files for c in captions[f]]).numpy().astype("int32")
         data[split] = (img_idx, tokens)
 
@@ -250,9 +249,13 @@ def main():
 
     with Timer() as t:
         history = model.fit(
-            train, validation_data=dev, epochs=EPOCHS,
-            callbacks=[keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True),
-                       make_time_limit_callback(TIME_LIMIT_MIN)],
+            train,
+            validation_data=dev,
+            epochs=EPOCHS,
+            callbacks=[
+                keras.callbacks.EarlyStopping(patience=3, restore_best_weights=True),
+                make_time_limit_callback(TIME_LIMIT_MIN),
+            ],
             verbose=2,
         )
 
@@ -272,9 +275,13 @@ def main():
 
     save_results(
         PROJECT,
-        {**bleu, "val_masked_accuracy": history.history["val_masked_accuracy"][-1],
-         "epochs_trained": len(history.history["loss"]),
-         "parameters": model.count_params(), "train_minutes": t.minutes},
+        {
+            **bleu,
+            "val_masked_accuracy": history.history["val_masked_accuracy"][-1],
+            "epochs_trained": len(history.history["loss"]),
+            "parameters": model.count_params(),
+            "train_minutes": t.minutes,
+        },
         history.history,
         curves=("loss", "masked_accuracy"),
     )
@@ -283,6 +290,7 @@ def main():
 def save_samples_figure(files, generated):
     """Save a 2x3 grid of test photos titled with their generated captions."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 

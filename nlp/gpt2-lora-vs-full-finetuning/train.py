@@ -26,6 +26,7 @@ Stack: Keras 3 + KerasHub (GPT2CausalLM), mixed precision (float16).
 Adapted from the Keras example by Abheesht Sharma & Matthew Watson (Apache-2.0):
 https://keras.io/examples/nlp/parameter_efficient_finetuning_of_gpt2_with_lora/
 """
+
 import json
 import os
 import subprocess
@@ -36,10 +37,10 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspa
 
 PROJECT = "09_gpt2_lora_finetuning"
 QUICK = os.environ.get("QUICK") == "1"
-MODE = os.environ.get("LORA_MODE")          # set internally: "full" or "lora"
+MODE = os.environ.get("LORA_MODE")  # set internally: "full" or "lora"
 
 BATCH_SIZE = 32
-NUM_BATCHES = 20 if QUICK else 500          # 500 x 32 = 16,000 stories
+NUM_BATCHES = 20 if QUICK else 500  # 500 x 32 = 16,000 stories
 VAL_BATCHES = 5 if QUICK else 50
 MAX_SEQUENCE_LENGTH = 128
 RANK, ALPHA = 4, 32.0
@@ -60,7 +61,7 @@ def load_data():
     texts = [t for t in ds.shuffle(seed=42)[column] if t and len(t) > 50]
     need = (NUM_BATCHES + VAL_BATCHES) * BATCH_SIZE
     texts = texts[:need]
-    val, train = texts[:VAL_BATCHES * BATCH_SIZE], texts[VAL_BATCHES * BATCH_SIZE:]
+    val, train = texts[: VAL_BATCHES * BATCH_SIZE], texts[VAL_BATCHES * BATCH_SIZE :]
 
     def make(t):
         """Batch raw strings; the GPT-2 preprocessor tokenizes them inside the model."""
@@ -99,12 +100,17 @@ def run_one(mode):
 
     optimizer = keras.optimizers.AdamW(
         learning_rate=(5e-5 * ALPHA / RANK) if mode == "lora" else 5e-5,
-        weight_decay=0.01, epsilon=1e-6, global_clipnorm=1.0)
+        weight_decay=0.01,
+        epsilon=1e-6,
+        global_clipnorm=1.0,
+    )
     # Standard practice: no weight decay on biases and LayerNorm scale/shift (gamma/beta).
     optimizer.exclude_from_weight_decay(var_names=["bias", "gamma", "beta"])
-    model.compile(optimizer=optimizer,
-                  loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
-                  weighted_metrics=["accuracy"])
+    model.compile(
+        optimizer=optimizer,
+        loss=keras.losses.SparseCategoricalCrossentropy(from_logits=True),
+        weighted_metrics=["accuracy"],
+    )
 
     # Perplexity = exp(average cross-entropy): "how many words is the model choosing between".
     def perplexity():
@@ -113,7 +119,7 @@ def run_one(mode):
         return float(np.exp(loss))
 
     ppl_before = perplexity()
-    tf.config.experimental.reset_memory_stats("GPU:0")   # so "peak" measures training only
+    tf.config.experimental.reset_memory_stats("GPU:0")  # so "peak" measures training only
     start = time.time()
     history = model.fit(train_ds, epochs=1, verbose=2)
     minutes = (time.time() - start) / 60
@@ -121,11 +127,18 @@ def run_one(mode):
     ppl_after = perplexity()
 
     samples = {p: model.generate(p, max_length=80) for p in PROMPTS}
-    result = {"mode": mode, "trainable_params": trainable, "total_params": total,
-              "trainable_percent": 100 * trainable / total,
-              "peak_gpu_memory_gb": peak_gb, "train_minutes": minutes,
-              "val_perplexity_before": ppl_before, "val_perplexity_after": ppl_after,
-              "final_train_loss": history.history["loss"][-1], "samples": samples}
+    result = {
+        "mode": mode,
+        "trainable_params": trainable,
+        "total_params": total,
+        "trainable_percent": 100 * trainable / total,
+        "peak_gpu_memory_gb": peak_gb,
+        "train_minutes": minutes,
+        "val_perplexity_before": ppl_before,
+        "val_perplexity_after": ppl_after,
+        "final_train_loss": history.history["loss"][-1],
+        "samples": samples,
+    }
     with open(os.path.join(results_dir(PROJECT), f"{mode}.json"), "w") as f:
         json.dump(result, f, indent=2)
     print(json.dumps(result, indent=2))
@@ -144,20 +157,30 @@ def compare():
 
     with open(os.path.join(out, "comparison.md"), "w") as f:
         f.write("| metric | full fine-tuning | LoRA (r=4) |\n|---|---|---|\n")
-        for key in ["trainable_params", "trainable_percent", "peak_gpu_memory_gb", "train_minutes",
-                    "val_perplexity_before", "val_perplexity_after"]:
-            fmt = "{:,}" if key == "trainable_params" else "{:.2f}"   # thousands separators for counts
+        for key in [
+            "trainable_params",
+            "trainable_percent",
+            "peak_gpu_memory_gb",
+            "train_minutes",
+            "val_perplexity_before",
+            "val_perplexity_after",
+        ]:
+            fmt = "{:,}" if key == "trainable_params" else "{:.2f}"  # thousands separators for counts
             f.write(f"| {key} | {fmt.format(full[key])} | {fmt.format(lora[key])} |\n")
         f.write("\n### Sample generations (LoRA model)\n\n")
         for p, s in lora["samples"].items():
             f.write(f"- **{p}** -> {s!r}\n")
 
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
-    keys = [("peak_gpu_memory_gb", "peak GPU memory (GB)"), ("train_minutes", "training time (min)"),
-            ("val_perplexity_after", "validation perplexity")]
+    keys = [
+        ("peak_gpu_memory_gb", "peak GPU memory (GB)"),
+        ("train_minutes", "training time (min)"),
+        ("val_perplexity_after", "validation perplexity"),
+    ]
     fig, axes = plt.subplots(1, 3, figsize=(12, 3.5))
     for ax, (k, title) in zip(axes, keys):
         ax.bar(["full", "LoRA"], [full[k], lora[k]], color=["#888", "#2a7ab9"])
@@ -166,13 +189,18 @@ def compare():
     fig.savefig(os.path.join(out, "full_vs_lora.png"), dpi=110)
     plt.close(fig)
 
-    save_results(PROJECT, {
-        "lora_trainable_params": lora["trainable_params"], "full_trainable_params": full["trainable_params"],
-        "memory_saving_percent": 100 * (1 - lora["peak_gpu_memory_gb"] / full["peak_gpu_memory_gb"]),
-        "speedup_percent": 100 * (1 - lora["train_minutes"] / full["train_minutes"]),
-        "full_val_perplexity": full["val_perplexity_after"], "lora_val_perplexity": lora["val_perplexity_after"],
-        "base_val_perplexity": full["val_perplexity_before"],
-    })
+    save_results(
+        PROJECT,
+        {
+            "lora_trainable_params": lora["trainable_params"],
+            "full_trainable_params": full["trainable_params"],
+            "memory_saving_percent": 100 * (1 - lora["peak_gpu_memory_gb"] / full["peak_gpu_memory_gb"]),
+            "speedup_percent": 100 * (1 - lora["train_minutes"] / full["train_minutes"]),
+            "full_val_perplexity": full["val_perplexity_after"],
+            "lora_val_perplexity": lora["val_perplexity_after"],
+            "base_val_perplexity": full["val_perplexity_before"],
+        },
+    )
 
 
 if __name__ == "__main__":

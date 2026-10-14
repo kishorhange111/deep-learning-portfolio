@@ -31,6 +31,7 @@ Dataset : "Totally Looks Like" (Rosenfeld et al., 2018) - ~6k pairs of images
 Adapted from the Keras example by Hazem Essam & Santiago L. Valdarrama (Apache-2.0):
 https://keras.io/examples/vision/siamese_network/
 """
+
 import os
 import subprocess
 import sys
@@ -81,12 +82,12 @@ def make_triplets():
     right = sorted(os.path.join(DATA_DIR, "right", f) for f in os.listdir(os.path.join(DATA_DIR, "right")))
     if QUICK:
         left, right = left[:400], right[:400]
-    rng = np.random.RandomState(32)   # fixed seed -> the same triplets (and split) every run
+    rng = np.random.RandomState(32)  # fixed seed -> the same triplets (and split) every run
     # Negatives: a random sample from all images. A negative can by chance be the
     # anchor's own pair - rare, and it matches the original example.
     negatives = np.array(left + right)
     rng.shuffle(negatives)
-    negatives = negatives[:len(left)]
+    negatives = negatives[: len(left)]
     order = rng.permutation(len(left))
     return np.array(left)[order], np.array(right)[order], negatives[order]
 
@@ -178,9 +179,11 @@ def evaluate(model, ds):
         total += n_batch
         cos_pos += cp
         cos_neg += cn
-    return {"triplet_accuracy": correct / total,
-            "cosine_anchor_positive": float(np.mean(cos_pos)),
-            "cosine_anchor_negative": float(np.mean(cos_neg))}
+    return {
+        "triplet_accuracy": correct / total,
+        "cosine_anchor_positive": float(np.mean(cos_pos)),
+        "cosine_anchor_negative": float(np.mean(cos_neg)),
+    }
 
 
 def main():
@@ -196,21 +199,28 @@ def main():
     model = SiameseModel(build_embedding(), MARGIN)
     model.compile(optimizer=keras.optimizers.Adam(1e-4))
 
-    before = evaluate(model, val_ds)   # ImageNet features + random head: the baseline
+    before = evaluate(model, val_ds)  # ImageNet features + random head: the baseline
     print("before fine-tuning:", before)
     with Timer() as t:
-        history = model.fit(train_ds, validation_data=val_ds, epochs=EPOCHS,
-                            callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)], verbose=2)
+        history = model.fit(
+            train_ds,
+            validation_data=val_ds,
+            epochs=EPOCHS,
+            callbacks=[make_time_limit_callback(TIME_LIMIT_MIN)],
+            verbose=2,
+        )
     after = evaluate(model, val_ds)
     print("after fine-tuning:", after)
 
     save_results(
         PROJECT,
-        {**{f"val_{k}_before": v for k, v in before.items()},
-         **{f"val_{k}_after": v for k, v in after.items()},
-         "epochs_trained": len(history.history["loss"]),
-         "trainable_parameters": int(sum(np.prod(w.shape) for w in model.embedding.trainable_weights)),
-         "train_minutes": t.minutes},
+        {
+            **{f"val_{k}_before": v for k, v in before.items()},
+            **{f"val_{k}_after": v for k, v in after.items()},
+            "epochs_trained": len(history.history["loss"]),
+            "trainable_parameters": int(sum(np.prod(w.shape) for w in model.embedding.trainable_weights)),
+            "train_minutes": t.minutes,
+        },
         history.history,
         curves=("loss",),
     )

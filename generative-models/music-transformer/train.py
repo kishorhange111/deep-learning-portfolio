@@ -29,6 +29,7 @@ Generated samples are saved as .mid files.
 
 Data: MAESTRO v3 (Google Magenta) - ~200 h of virtuoso piano performances, CC BY-NC-SA 4.0.
 """
+
 import json
 import math
 import os
@@ -84,19 +85,19 @@ def notes_to_tokens(notes):
     """
     events = []
     for start, end, pitch, velocity in notes:
-        events.append((start, 1, pitch, velocity))   # 1 = on
-        events.append((end, 0, pitch, 0))            # 0 = off (sorted before 'on' at the same time)
+        events.append((start, 1, pitch, velocity))  # 1 = on
+        events.append((end, 0, pitch, 0))  # 0 = off (sorted before 'on' at the same time)
     events.sort()
     tokens, t, last_vel = [], 0.0, None
     for time_s, kind, pitch, vel in events:
-        steps = int(round((time_s - t) * 100))                   # 10 ms resolution
+        steps = int(round((time_s - t) * 100))  # 10 ms resolution
         while steps > 0:
             s = min(steps, 100)
             tokens.append(SHIFT + s - 1)
             steps -= s
         t = time_s
         if kind == 1:
-            v = min(vel // 4, 31)                                # MIDI velocity 0-127 -> 32 bins
+            v = min(vel // 4, 31)  # MIDI velocity 0-127 -> 32 bins
             if v != last_vel:
                 tokens.append(VEL + v)
                 last_vel = v
@@ -114,21 +115,21 @@ def tokens_to_notes(tokens):
     held at the end are closed after 0.5 s.
     """
     notes = []
-    t, vel, open_notes = 0.0, 64, {}                           # default velocity until a VELOCITY token appears
+    t, vel, open_notes = 0.0, 64, {}  # default velocity until a VELOCITY token appears
     for tok in tokens:
-        if tok < NOTE_OFF:                                     # NOTE_ON
+        if tok < NOTE_OFF:  # NOTE_ON
             open_notes[tok] = (t, vel)
-        elif tok < SHIFT:                                      # NOTE_OFF
+        elif tok < SHIFT:  # NOTE_OFF
             p = tok - NOTE_OFF
             if p in open_notes:
                 s, v = open_notes.pop(p)
                 if t > s:
                     notes.append((v, p, s, t))
-        elif tok < VEL:                                        # TIME_SHIFT of 1..100 steps of 10 ms
+        elif tok < VEL:  # TIME_SHIFT of 1..100 steps of 10 ms
             t += (tok - SHIFT + 1) / 100
-        else:                                                  # VELOCITY bin -> centre of the bin
+        else:  # VELOCITY bin -> centre of the bin
             vel = (tok - VEL) * 4 + 2
-    for p, (s, v) in open_notes.items():                        # close anything still held
+    for p, (s, v) in open_notes.items():  # close anything still held
         notes.append((v, p, s, s + 0.5))
     return notes
 
@@ -150,6 +151,7 @@ def decode_tokens(tokens, path):
 # ---------------------------------------------------------------------------
 class Block(nn.Module):
     """Pre-norm Transformer decoder block: x + Attn(LN(x)), then x + MLP(LN(x)), with dropout."""
+
     def __init__(self):
         super().__init__()
         self.ln1, self.ln2 = nn.LayerNorm(D_MODEL), nn.LayerNorm(D_MODEL)
@@ -170,9 +172,10 @@ class Block(nn.Module):
 
 class GPT(nn.Module):
     """Decoder-only Transformer over performance-event tokens (token + learned position embeddings)."""
+
     def __init__(self):
         super().__init__()
-        self.tok = nn.Embedding(VOCAB + 1, D_MODEL)              # +1 row for the PAD id
+        self.tok = nn.Embedding(VOCAB + 1, D_MODEL)  # +1 row for the PAD id
         self.pos = nn.Embedding(SEQ, D_MODEL)
         self.blocks = nn.ModuleList([Block() for _ in range(N_LAYERS)])
         self.ln = nn.LayerNorm(D_MODEL)
@@ -201,7 +204,7 @@ class GPT(nn.Module):
             sp, si = probs.sort(descending=True)
             # Drop an event if the events ranked above it already cover top_p of the mass
             # (the most likely event is therefore always kept).
-            mask = sp.cumsum(-1) - sp > top_p                    # nucleus sampling
+            mask = sp.cumsum(-1) - sp > top_p  # nucleus sampling
             sp[mask] = 0
             nxt = si.gather(-1, torch.multinomial(sp / sp.sum(-1, keepdim=True), 1))
             idx = torch.cat([idx, nxt], 1)
@@ -218,7 +221,7 @@ def music_stats(tokens):
     notes per second; mean velocity of the VELOCITY events).
     """
     on = [t for t in tokens if t < NOTE_OFF]
-    secs = sum((t - SHIFT + 1) / 100 for t in tokens if SHIFT <= t < VEL) or 1e-6   # total duration; avoid / 0
+    secs = sum((t - SHIFT + 1) / 100 for t in tokens if SHIFT <= t < VEL) or 1e-6  # total duration; avoid / 0
     vels = [(t - VEL) * 4 + 2 for t in tokens if t >= VEL]
     pc = np.bincount([p % 12 for p in on], minlength=12).astype(float)
     return pc / max(pc.sum(), 1), len(on) / secs, float(np.mean(vels)) if vels else 0.0
@@ -252,17 +255,20 @@ def main():
         zipfile.ZipFile(zpath).extractall(DATA)
     root = os.path.join(DATA, "maestro-v3.0.0")
     rows = list(csv.DictReader(open(os.path.join(root, "maestro-v3.0.0.csv"))))
-    split = {s: [os.path.join(root, r["midi_filename"]) for r in rows if r["split"] == s] for s in ["train", "validation", "test"]}
+    split = {
+        s: [os.path.join(root, r["midi_filename"]) for r in rows if r["split"] == s]
+        for s in ["train", "validation", "test"]
+    }
     if QUICK:
         split = {k: v[:20] for k, v in split.items()}
     t0 = time.time()
     from multiprocessing import Pool
 
-    with Pool(os.cpu_count()) as pool:                          # MIDI parsing is CPU-bound: use every core
+    with Pool(os.cpu_count()) as pool:  # MIDI parsing is CPU-bound: use every core
         enc = {k: pool.map(encode_midi, v) for k, v in split.items()}
     n_tok = {k: sum(map(len, v)) for k, v in enc.items()}
     print(f"tokenized in {(time.time() - t0) / 60:.1f} min: {n_tok}")
-    train = [torch.tensor(s) for s in enc["train"] if len(s) > SEQ + 1]   # pieces long enough for one window
+    train = [torch.tensor(s) for s in enc["train"] if len(s) > SEQ + 1]  # pieces long enough for one window
 
     def batch():
         """Random training batch: BATCH windows of SEQ + 1 events -> (inputs, next-event targets)."""
@@ -270,7 +276,7 @@ def main():
         for _ in range(BATCH):
             s = random.choice(train)
             i = random.randint(0, len(s) - SEQ - 1)
-            xs.append(s[i:i + SEQ + 1])
+            xs.append(s[i : i + SEQ + 1])
         x = torch.stack(xs).to(DEVICE)
         return x[:, :-1], x[:, 1:]
 
@@ -281,7 +287,7 @@ def main():
     scaler = torch.amp.GradScaler(enabled=AMP_DTYPE == torch.float16)
     history, it, start = [], 0, time.time()
     while time.time() - start < TIME_BUDGET_MIN * 60:
-        lr = 3e-4 * min(1.0, (it + 1) / 500)                    # linear warm-up over 500 steps, then constant
+        lr = 3e-4 * min(1.0, (it + 1) / 500)  # linear warm-up over 500 steps, then constant
         for g in opt.param_groups:
             g["lr"] = lr
         x, y = batch()
@@ -289,7 +295,7 @@ def main():
             loss = F.cross_entropy(model(x).view(-1, VOCAB), y.reshape(-1))
         opt.zero_grad(set_to_none=True)
         scaler.scale(loss).backward()
-        scaler.unscale_(opt)                                    # clip the true (unscaled) gradients
+        scaler.unscale_(opt)  # clip the true (unscaled) gradients
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         scaler.step(opt)
         scaler.update()
@@ -306,13 +312,13 @@ def main():
         for s in enc["test"]:
             s = torch.tensor(s)
             for i in range(0, len(s) - SEQ - 1, SEQ):
-                w = s[i:i + SEQ + 1].to(DEVICE)[None]
+                w = s[i : i + SEQ + 1].to(DEVICE)[None]
                 with torch.autocast("cuda", dtype=AMP_DTYPE):
                     # Summed (not mean) loss so we can average over every predicted event at the end.
                     nll = F.cross_entropy(model(w[:, :-1]).float().view(-1, VOCAB), w[0, 1:], reduction="sum")
                 total += nll.item()
                 count += SEQ
-    ppl = math.exp(total / count)   # perplexity = exp(mean negative log-likelihood per event)
+    ppl = math.exp(total / count)  # perplexity = exp(mean negative log-likelihood per event)
 
     # ---- generate continuations of held-out openings and compare statistics with real music ----
     real = [t for s in enc["test"] for t in s]
@@ -326,18 +332,26 @@ def main():
         decode_tokens(s[:256], os.path.join(out, f"sample_{k + 1}_prompt.mid"))
         gen_stats.append(music_stats(g[256:]))
     gen_pc = np.mean([g[0] for g in gen_stats], 0)
-    metrics = {"params": params, "train_iterations": it, "train_minutes": train_min,
-               "train_tokens": n_tok["train"], "test_perplexity": ppl,
-               "pitch_class_similarity_generated_vs_real": js_similarity(gen_pc, real_pc),
-               "notes_per_second_real": real_density,
-               "notes_per_second_generated": float(np.mean([g[1] for g in gen_stats])),
-               "mean_velocity_real": real_vel, "mean_velocity_generated": float(np.mean([g[2] for g in gen_stats])),
-               "gpu": torch.cuda.get_device_name(0)}
+    metrics = {
+        "params": params,
+        "train_iterations": it,
+        "train_minutes": train_min,
+        "train_tokens": n_tok["train"],
+        "test_perplexity": ppl,
+        "pitch_class_similarity_generated_vs_real": js_similarity(gen_pc, real_pc),
+        "notes_per_second_real": real_density,
+        "notes_per_second_generated": float(np.mean([g[1] for g in gen_stats])),
+        "mean_velocity_real": real_vel,
+        "mean_velocity_generated": float(np.mean([g[2] for g in gen_stats])),
+        "gpu": torch.cuda.get_device_name(0),
+    }
     json.dump({"metrics": metrics, "history": history}, open(os.path.join(out, "metrics.json"), "w"), indent=2)
 
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
+
     fig, ax = plt.subplots(figsize=(7, 3.2))
     names = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
     x = np.arange(12)

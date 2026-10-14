@@ -1,4 +1,5 @@
 """Tests for the PyTorch generative-model projects: music tokenizer, SMILES helpers, AdaIN, Gram matrices."""
+
 import math
 
 import numpy as np
@@ -34,7 +35,7 @@ def test_velocity_token_only_when_bin_changes():
 def test_note_off_sorted_before_note_on_at_same_time():
     tokens = music.notes_to_tokens([(0.0, 0.5, 60, 64), (0.5, 1.0, 60, 64)])
     i_off = tokens.index(music.NOTE_OFF + 60)
-    assert tokens.index(music.NOTE_ON + 60, i_off) > i_off           # the re-strike comes after the release
+    assert tokens.index(music.NOTE_ON + 60, i_off) > i_off  # the re-strike comes after the release
 
 
 def test_tokens_roundtrip():
@@ -43,18 +44,18 @@ def test_tokens_roundtrip():
     by_pitch = {p: (v, s, e) for v, p, s, e in decoded}
     assert by_pitch[60][1:] == pytest.approx((0.0, 0.5))
     assert by_pitch[64][1:] == pytest.approx((0.25, 1.0))
-    assert by_pitch[60][0] == 82 and by_pitch[64][0] == 42           # centre of the velocity bin
+    assert by_pitch[60][0] == 82 and by_pitch[64][0] == 42  # centre of the velocity bin
 
 
 def test_tokens_to_notes_handles_malformed_sequences():
     notes = music.tokens_to_notes([music.NOTE_OFF + 50, music.NOTE_ON + 60])
-    assert notes == [(64, 60, 0.0, 0.5)]                              # stray NOTE_OFF ignored, held note closed
+    assert notes == [(64, 60, 0.0, 0.5)]  # stray NOTE_OFF ignored, held note closed
 
 
 def test_music_stats_and_js_similarity():
     tokens = music.notes_to_tokens([(0.0, 0.5, 60, 64), (0.5, 1.0, 72, 64)])
     pc, density, vel = music.music_stats(tokens)
-    assert pc[0] == pytest.approx(1.0) and pc.sum() == pytest.approx(1.0)   # both notes are a C
+    assert pc[0] == pytest.approx(1.0) and pc.sum() == pytest.approx(1.0)  # both notes are a C
     assert density == pytest.approx(2.0)
     assert vel == pytest.approx(66.0)
     p = np.array([0.5, 0.5, 0.0])
@@ -76,7 +77,7 @@ def test_music_gpt_is_causal():
     model = music.GPT().eval()
     x = torch.randint(0, music.VOCAB, (1, 12))
     y = x.clone()
-    y[0, -1] = (y[0, -1] + 1) % music.VOCAB                           # change only the last event
+    y[0, -1] = (y[0, -1] + 1) % music.VOCAB  # change only the last event
     with torch.no_grad():
         assert torch.allclose(model(x)[0, :-1], model(y)[0, :-1], atol=1e-5)
 
@@ -88,8 +89,8 @@ def test_smiles_vocab_roundtrip():
     assert min(stoi.values()) == 3 and vocab == len(stoi) + 3
     ids = mol.encode_smiles("CC(=O)O", stoi)
     assert ids[0] == mol.BOS and ids[-1] == mol.EOS
-    assert mol.decode_sample(ids[1:] + [mol.PAD, 5], itos) == "CC(=O)O"   # stops at the first EOS
-    assert mol.decode_sample([stoi["C"], stoi["C"]], itos) is None        # never finished
+    assert mol.decode_sample(ids[1:] + [mol.PAD, 5], itos) == "CC(=O)O"  # stops at the first EOS
+    assert mol.decode_sample([stoi["C"], stoi["C"]], itos) is None  # never finished
 
 
 def test_generation_rates():
@@ -111,7 +112,7 @@ def test_mean_std():
     m, s = adain.mean_std(f)
     assert m.shape == (1, 2, 1, 1)
     assert m.flatten().tolist() == pytest.approx([1.5, 5.5])
-    assert s.flatten().tolist() == pytest.approx([math.sqrt(5 / 3 + 1e-5)] * 2)   # unbiased variance
+    assert s.flatten().tolist() == pytest.approx([math.sqrt(5 / 3 + 1e-5)] * 2)  # unbiased variance
 
 
 def test_adain_transfers_style_statistics():
@@ -139,7 +140,7 @@ def test_stylize_alpha_zero_reconstructs_content_features():
 
 # ---------------------------------------------------------------- Gatys style transfer
 def test_gram_matrix():
-    f = torch.tensor([[1.0, 2.0], [3.0, 4.0]]).view(1, 2, 1, 2)       # c=2, h=1, w=2
+    f = torch.tensor([[1.0, 2.0], [3.0, 4.0]]).view(1, 2, 1, 2)  # c=2, h=1, w=2
     g = nst.gram(f)
     assert torch.allclose(g, torch.tensor([[5.0, 11.0], [11.0, 25.0]]) / 4)
     assert torch.allclose(g, g.t())

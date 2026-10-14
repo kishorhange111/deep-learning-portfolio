@@ -27,6 +27,7 @@ EVALUATION with RDKit on 10,000 sampled molecules (the MOSES / GuacaMol metrics)
                   compared with the training data
 Data: ZINC-250k drug-like molecules (Gomez-Bombarelli et al., 2018).
 """
+
 import json
 import os
 import random
@@ -46,13 +47,15 @@ from common.utils import results_dir
 PROJECT = "14_molecule_generation_gpt"
 QUICK = os.environ.get("QUICK") == "1"
 DEVICE = "cuda"
-URL = ("https://raw.githubusercontent.com/aspuru-guzik-group/chemical_vae/master/models/zinc_properties/"
-       "250k_rndm_zinc_drugs_clean_3.csv")
+URL = (
+    "https://raw.githubusercontent.com/aspuru-guzik-group/chemical_vae/master/models/zinc_properties/"
+    "250k_rndm_zinc_drugs_clean_3.csv"
+)
 D, LAYERS, HEADS, MAXLEN, BATCH = 384, 6, 6, 128, 256
 N_SAMPLES = 500 if QUICK else 10000
 TIME_BUDGET_MIN = 2 if QUICK else float(os.environ.get("TIME_BUDGET_MIN", "30"))
 AMP = torch.bfloat16 if torch.cuda.is_bf16_supported() else torch.float16
-PAD, BOS, EOS = 0, 1, 2                                     # special token ids; characters start at 3
+PAD, BOS, EOS = 0, 1, 2  # special token ids; characters start at 3
 
 
 def load_smiles():
@@ -72,7 +75,7 @@ def build_vocab(smiles):
     PAD / BOS / EOS), the inverse mapping, and the total number of ids.
     """
     chars = sorted(set("".join(smiles)))
-    stoi = {c: i + 3 for i, c in enumerate(chars)}           # 0 pad, 1 bos, 2 eos
+    stoi = {c: i + 3 for i, c in enumerate(chars)}  # 0 pad, 1 bos, 2 eos
     itos = {i: c for c, i in stoi.items()}
     return stoi, itos, len(chars) + 3
 
@@ -87,7 +90,7 @@ def decode_sample(row, itos):
 
     Everything after the first EOS is ignored, as are special ids.
     """
-    return "".join(itos.get(t, "") for t in row[:row.index(EOS)] if t > 2) if EOS in row else None
+    return "".join(itos.get(t, "") for t in row[: row.index(EOS)] if t > 2) if EOS in row else None
 
 
 def generation_rates(n_generated, valid, train_set):
@@ -101,13 +104,17 @@ def generation_rates(n_generated, valid, train_set):
     """
     unique = set(valid)
     novel = [s for s in unique if s not in train_set]
-    rates = {"validity": len(valid) / n_generated, "uniqueness": len(unique) / max(len(valid), 1),
-             "novelty": len(novel) / max(len(unique), 1)}
+    rates = {
+        "validity": len(valid) / n_generated,
+        "uniqueness": len(unique) / max(len(valid), 1),
+        "novelty": len(novel) / max(len(unique), 1),
+    }
     return rates, unique, novel
 
 
 class Block(nn.Module):
     """Pre-norm Transformer decoder block: x + causal self-attention(LN(x)), then x + MLP(LN(x))."""
+
     def __init__(self):
         super().__init__()
         self.ln1, self.ln2 = nn.LayerNorm(D), nn.LayerNorm(D)
@@ -126,6 +133,7 @@ class Block(nn.Module):
 
 class GPT(nn.Module):
     """Character-level decoder-only Transformer over SMILES tokens."""
+
     def __init__(self, vocab):
         super().__init__()
         self.tok, self.pos = nn.Embedding(vocab, D), nn.Embedding(MAXLEN, D)
@@ -144,15 +152,15 @@ class GPT(nn.Module):
 def sample(model, n, bos, eos, temperature=1.0):
     """Generate n SMILES in parallel batches, character by character."""
     out = []
-    for i in range(0, n, 1000):                               # 1,000 molecules per batch
+    for i in range(0, n, 1000):  # 1,000 molecules per batch
         m = min(1000, n - i)
         idx = torch.full((m, 1), bos, device=DEVICE)
         done = torch.zeros(m, dtype=torch.bool, device=DEVICE)
         for _ in range(MAXLEN - 1):
             with torch.autocast("cuda", dtype=AMP):
                 logits = model(idx)[:, -1].float() / temperature
-            nxt = torch.multinomial(F.softmax(logits, -1), 1)   # sample (not argmax) -> diverse molecules
-            nxt[done] = eos                                       # finished sequences keep emitting EOS
+            nxt = torch.multinomial(F.softmax(logits, -1), 1)  # sample (not argmax) -> diverse molecules
+            nxt[done] = eos  # finished sequences keep emitting EOS
             idx = torch.cat([idx, nxt], 1)
             done |= nxt[:, 0] == eos
             if done.all():
@@ -165,8 +173,11 @@ def props(mols):
     """Drug-likeness (QED), lipophilicity (Crippen logP) and molecular weight for a list of RDKit molecules."""
     from rdkit.Chem import QED, Crippen, Descriptors
 
-    return {"QED": [QED.qed(m) for m in mols], "logP": [Crippen.MolLogP(m) for m in mols],
-            "MolWt": [Descriptors.MolWt(m) for m in mols]}
+    return {
+        "QED": [QED.qed(m) for m in mols],
+        "logP": [Crippen.MolLogP(m) for m in mols],
+        "MolWt": [Descriptors.MolWt(m) for m in mols],
+    }
 
 
 def main():
@@ -183,11 +194,11 @@ def main():
         smiles = smiles[:5000]
     train_set = set(smiles)
     stoi, itos, vocab = build_vocab(smiles)
-    enc = [encode_smiles(s, stoi) for s in smiles if len(s) + 2 <= MAXLEN]   # +2 for BOS / EOS
+    enc = [encode_smiles(s, stoi) for s in smiles if len(s) + 2 <= MAXLEN]  # +2 for BOS / EOS
     # One padded (n_molecules, MAXLEN) tensor; PAD positions are ignored by the loss.
     data = torch.full((len(enc), MAXLEN), PAD)
     for i, e in enumerate(enc):
-        data[i, :len(e)] = torch.tensor(e)
+        data[i, : len(e)] = torch.tensor(e)
     print(f"{len(enc)} molecules, vocab {vocab}")
 
     model = GPT(vocab).to(DEVICE)
@@ -197,14 +208,14 @@ def main():
     history, it, start = [], 0, time.time()
     while time.time() - start < TIME_BUDGET_MIN * 60:
         for g in opt.param_groups:
-            g["lr"] = 5e-4 * min(1.0, (it + 1) / 300)           # linear warm-up over 300 steps, then constant
+            g["lr"] = 5e-4 * min(1.0, (it + 1) / 300)  # linear warm-up over 300 steps, then constant
         x = data[torch.randint(len(data), (BATCH,))].to(DEVICE)  # random batch of molecules (sampling with replacement)
         with torch.autocast("cuda", dtype=AMP):
-            logits = model(x[:, :-1])                            # predict character t+1 from characters <= t
+            logits = model(x[:, :-1])  # predict character t+1 from characters <= t
             loss = F.cross_entropy(logits.reshape(-1, vocab).float(), x[:, 1:].reshape(-1), ignore_index=PAD)
         opt.zero_grad(set_to_none=True)
         scaler.scale(loss).backward()
-        scaler.unscale_(opt)                                     # clip the true (unscaled) gradients
+        scaler.unscale_(opt)  # clip the true (unscaled) gradients
         torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
         scaler.step(opt)
         scaler.update()
@@ -223,8 +234,8 @@ def main():
     for s in gen:
         m = Chem.MolFromSmiles(s) if s else None
         if m is not None:
-            valid.append(Chem.MolToSmiles(m))                  # canonical form, so duplicates are detected
-    rates, unique, novel = generation_rates(len(gen), valid, train_set)   # raw-string novelty check
+            valid.append(Chem.MolToSmiles(m))  # canonical form, so duplicates are detected
+    rates, unique, novel = generation_rates(len(gen), valid, train_set)  # raw-string novelty check
     # NOTE: canon_train (canonical training SMILES) is built but not used by the reported novelty, which
     # compares against the raw training strings. Kept as-is so random.sample() below draws the same
     # molecules as in the published run.
@@ -236,16 +247,25 @@ def main():
     gen_mols = [Chem.MolFromSmiles(s) for s in random.sample(sorted(unique), min(5000, len(unique)))]
     p_gen, p_train = props(gen_mols), props(train_mols)
 
-    metrics = {"params": sum(p.numel() for p in model.parameters()), "train_iterations": it,
-               "train_minutes": train_min, "train_molecules": len(enc), "generated": len(gen),
-               **rates,
-               **{f"{k}_mean_generated": float(np.mean(v)) for k, v in p_gen.items()},
-               **{f"{k}_mean_train": float(np.mean(v)) for k, v in p_train.items()},
-               "gpu": torch.cuda.get_device_name(0)}
-    json.dump({"metrics": metrics, "history": history, "examples": sorted(unique)[:40]},
-              open(os.path.join(out, "metrics.json"), "w"), indent=2)
+    metrics = {
+        "params": sum(p.numel() for p in model.parameters()),
+        "train_iterations": it,
+        "train_minutes": train_min,
+        "train_molecules": len(enc),
+        "generated": len(gen),
+        **rates,
+        **{f"{k}_mean_generated": float(np.mean(v)) for k, v in p_gen.items()},
+        **{f"{k}_mean_train": float(np.mean(v)) for k, v in p_train.items()},
+        "gpu": torch.cuda.get_device_name(0),
+    }
+    json.dump(
+        {"metrics": metrics, "history": history, "examples": sorted(unique)[:40]},
+        open(os.path.join(out, "metrics.json"), "w"),
+        indent=2,
+    )
 
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
     from rdkit.Chem import Draw
@@ -259,7 +279,9 @@ def main():
     fig.tight_layout()
     fig.savefig(os.path.join(out, "property_distributions.png"), dpi=110)
     plt.close(fig)
-    Draw.MolsToGridImage(gen_mols[:12], molsPerRow=6, subImgSize=(220, 180)).save(os.path.join(out, "generated_molecules.png"))
+    Draw.MolsToGridImage(gen_mols[:12], molsPerRow=6, subImgSize=(220, 180)).save(
+        os.path.join(out, "generated_molecules.png")
+    )
     print(json.dumps(metrics, indent=2))
 
 

@@ -1,4 +1,5 @@
 """Tests for caption cleaning, parsing, decoding and BLEU (common/captioning.py)."""
+
 import pytest
 
 from common.captioning import bleu_scores, clean_caption, parse_flickr_tokens, tokens_to_caption
@@ -12,8 +13,8 @@ def test_clean_caption():
 def test_parse_flickr_tokens_filters_and_wraps():
     good = "a dog runs on the grass"
     lines = [f"img1.jpg#{i}\t{good}\n" for i in range(5)]
-    lines += ["img1.jpg#5\tsixth caption is also fine here\n"]      # only the first 5 are kept
-    lines += [f"img2.jpg#{i}\tshort one\n" for i in range(5)]       # too short -> image dropped
+    lines += ["img1.jpg#5\tsixth caption is also fine here\n"]  # only the first 5 are kept
+    lines += [f"img2.jpg#{i}\tshort one\n" for i in range(5)]  # too short -> image dropped
     caps = parse_flickr_tokens(lines, seq_length=25)
     assert list(caps) == ["img1.jpg"]
     assert len(caps["img1.jpg"]) == 5

@@ -6,9 +6,10 @@ Kept free of TensorFlow / Keras so the caption pre-processing, the decoding of
 generated token ids and the BLEU evaluation can be unit-tested on any machine
 (`tests/test_captioning.py`).
 """
+
 import re
 
-START, END = "startseq", "endseq"   # sentence markers added around every caption
+START, END = "startseq", "endseq"  # sentence markers added around every caption
 
 
 def clean_caption(text):
@@ -27,7 +28,7 @@ def parse_flickr_tokens(lines, seq_length):
     captions = {}
     for line in lines:
         img, text = line.rstrip("\n").split("\t")
-        img = img.split("#")[0]                    # "xyz.jpg#3" -> "xyz.jpg"
+        img = img.split("#")[0]  # "xyz.jpg#3" -> "xyz.jpg"
         words = clean_caption(text).split()
         if 5 <= len(words) <= seq_length - 2:
             captions.setdefault(img, []).append(f"{START} " + " ".join(words) + f" {END}")
@@ -60,5 +61,7 @@ def bleu_scores(refs, hyps, prefix="test_bleu_"):
     from nltk.translate.bleu_score import SmoothingFunction, corpus_bleu
 
     smooth = SmoothingFunction().method1
-    return {f"{prefix}{n}": corpus_bleu(refs, hyps, weights=tuple([1 / n] * n), smoothing_function=smooth)
-            for n in range(1, 5)}
+    return {
+        f"{prefix}{n}": corpus_bleu(refs, hyps, weights=tuple([1 / n] * n), smoothing_function=smooth)
+        for n in range(1, 5)
+    }

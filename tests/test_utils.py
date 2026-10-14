@@ -1,4 +1,5 @@
 """Tests for common/utils.py: seeding, output folder, results files, timers."""
+
 import json
 import time
 
@@ -53,6 +54,6 @@ def test_time_limit_callback_stops_training():
     cb.set_model(model)
     model.stop_training = False
     cb.on_train_begin()
-    cb.deadline -= 1          # the budget is already used up
+    cb.deadline -= 1  # the budget is already used up
     cb.on_epoch_end(0)
     assert model.stop_training

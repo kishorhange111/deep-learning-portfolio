@@ -1,4 +1,5 @@
 """Tests for the knowledge-distillation loss (common/distillation.py)."""
+
 import pytest
 
 torch = pytest.importorskip("torch")
@@ -26,7 +27,7 @@ def test_soft_term_hand_computed():
     T = 2.0
     p = torch.softmax(t / T, -1)
     q = torch.softmax(s / T, -1)
-    expected = (p * (p.log() - q.log())).sum() * T ** 2
+    expected = (p * (p.log() - q.log())).sum() * T**2
     got = distillation_loss(s, t, torch.tensor([0]), temperature=T, alpha=0.0)
     assert got.item() == pytest.approx(expected.item(), rel=1e-5)
 

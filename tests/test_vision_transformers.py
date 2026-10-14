@@ -1,4 +1,5 @@
 """Tests for the ViT and ShiftViT building blocks (Keras on the PyTorch backend, CPU)."""
+
 import numpy as np
 import pytest
 from conftest import load_train
@@ -13,7 +14,7 @@ shiftvit = load_train("computer-vision/shiftvit-attention-free-transformer")
 def test_patches_shape_and_content():
     images = np.arange(2 * 12 * 12 * 3, dtype="float32").reshape(2, 12, 12, 3)
     patches = ops.convert_to_numpy(vit.Patches(6)(images))
-    assert patches.shape == (2, 4, 6 * 6 * 3)               # (12 / 6)^2 = 4 patches of 108 values
+    assert patches.shape == (2, 4, 6 * 6 * 3)  # (12 / 6)^2 = 4 patches of 108 values
     assert np.allclose(patches[0, 0], images[0, :6, :6, :].reshape(-1))
 
 
@@ -21,7 +22,7 @@ def test_patch_encoder_adds_positions():
     enc = vit.PatchEncoder(num_patches=4, projection_dim=8)
     out = ops.convert_to_numpy(enc(np.zeros((2, 4, 108), dtype="float32")))
     assert out.shape == (2, 4, 8)
-    assert not np.allclose(out[0, 0], out[0, 1])             # zero input -> only position embeddings differ
+    assert not np.allclose(out[0, 0], out[0, 1])  # zero input -> only position embeddings differ
 
 
 def test_vit_forward_pass():
@@ -50,8 +51,8 @@ def test_drop_path_identity_at_inference_and_per_sample_in_training():
     assert np.array_equal(ops.convert_to_numpy(layer(x, training=False)), x)
     y = ops.convert_to_numpy(layer(x, training=True))
     per_sample = y.reshape(64, -1)
-    assert set(np.unique(per_sample)) <= {0.0, 2.0}             # kept samples are rescaled by 1 / keep
-    assert np.all(per_sample.min(1) == per_sample.max(1))         # whole sample kept or dropped
+    assert set(np.unique(per_sample)) <= {0.0, 2.0}  # kept samples are rescaled by 1 / keep
+    assert np.all(per_sample.min(1) == per_sample.max(1))  # whole sample kept or dropped
 
 
 def test_shiftvit_block_and_patch_merging_shapes():
@@ -66,7 +67,7 @@ def test_warmup_cosine_schedule():
     assert lr(0) == pytest.approx(1e-5)
     assert lr(5) == pytest.approx(1e-5 + (1e-3 - 1e-5) * 0.5)
     assert lr(10) == pytest.approx(1e-3)
-    assert lr(60) == pytest.approx(5e-4, rel=1e-4)               # half-way through the cosine
+    assert lr(60) == pytest.approx(5e-4, rel=1e-4)  # half-way through the cosine
     assert lr(110) == pytest.approx(0.0, abs=1e-9)
-    assert lr(500) == pytest.approx(0.0, abs=1e-9)               # clipped after the end
+    assert lr(500) == pytest.approx(0.0, abs=1e-9)  # clipped after the end
     assert sched.get_config()["total_steps"] == 110

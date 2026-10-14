@@ -22,6 +22,7 @@ DATA: content = natural photos (Imagenette), style = paintings (WikiArt, streame
 EVALUATION: held-out content/style pairs (styles never seen in training), the
 content-vs-style trade-off (alpha), and speed vs. the optimisation method of project 11.
 """
+
 import io
 import json
 import os
@@ -56,15 +57,29 @@ STD = torch.tensor([0.229, 0.224, 0.225]).view(1, 3, 1, 1)
 # Data
 # ---------------------------------------------------------------------------
 # Pre-1900 movements only for the held-out styles shown in the published figures (public-domain artworks).
-PUBLIC_DOMAIN_MOVEMENTS = {"Baroque", "Rococo", "Impressionism", "Early_Renaissance", "High_Renaissance",
-                           "Northern_Renaissance", "Mannerism_Late_Renaissance", "Romanticism", "Realism", "Ukiyo_e"}
+PUBLIC_DOMAIN_MOVEMENTS = {
+    "Baroque",
+    "Rococo",
+    "Impressionism",
+    "Early_Renaissance",
+    "High_Renaissance",
+    "Northern_Renaissance",
+    "Mannerism_Late_Renaissance",
+    "Romanticism",
+    "Realism",
+    "Ukiyo_e",
+}
 
 
 def load_images(name, config, split, n, key, public_domain_only=False, skip=0):
     """Stream n images from a Hugging Face dataset and keep them as small PIL images in memory."""
     from datasets import load_dataset
 
-    ds = load_dataset(name, config, split=split, streaming=True) if config else load_dataset(name, split=split, streaming=True)
+    ds = (
+        load_dataset(name, config, split=split, streaming=True)
+        if config
+        else load_dataset(name, split=split, streaming=True)
+    )
     out, seen = [], 0
     names = ds.features["style"].names if public_domain_only else None
     for ex in ds.shuffle(seed=42, buffer_size=2000):
@@ -146,21 +161,32 @@ class Encoder(nn.Module):
 
 def decoder():
     """Mirror of VGG up to relu4_1; nearest upsampling + reflection padding avoid checkerboard artefacts."""
+
     def conv(i, o, relu=True):
         """Reflection-padded 3x3 conv (+ ReLU); padding by reflection avoids dark image borders."""
         layers = [nn.ReflectionPad2d(1), nn.Conv2d(i, o, 3)]
         return layers + ([nn.ReLU(inplace=True)] if relu else [])
+
     return nn.Sequential(
-        *conv(512, 256), nn.Upsample(scale_factor=2, mode="nearest"),
-        *conv(256, 256), *conv(256, 256), *conv(256, 256), *conv(256, 128), nn.Upsample(scale_factor=2, mode="nearest"),
-        *conv(128, 128), *conv(128, 64), nn.Upsample(scale_factor=2, mode="nearest"),
-        *conv(64, 64), *conv(64, 3, relu=False))
+        *conv(512, 256),
+        nn.Upsample(scale_factor=2, mode="nearest"),
+        *conv(256, 256),
+        *conv(256, 256),
+        *conv(256, 256),
+        *conv(256, 128),
+        nn.Upsample(scale_factor=2, mode="nearest"),
+        *conv(128, 128),
+        *conv(128, 64),
+        nn.Upsample(scale_factor=2, mode="nearest"),
+        *conv(64, 64),
+        *conv(64, 3, relu=False),
+    )
 
 
 def mean_std(f, eps=1e-5):
     """Per-sample, per-channel mean and standard deviation of (B, C, H, W) features, shaped (B, C, 1, 1)."""
     b, c = f.shape[:2]
-    v = f.view(b, c, -1)                                       # flatten the spatial dimensions
+    v = f.view(b, c, -1)  # flatten the spatial dimensions
     return v.mean(-1).view(b, c, 1, 1), (v.var(-1) + eps).sqrt().view(b, c, 1, 1)
 
 
@@ -206,6 +232,7 @@ def losses(enc, dec, content, style):
 def main():
     """Load content + style data, train the decoder under a time budget, evaluate on held-out styles, time it, save figures."""
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -218,15 +245,22 @@ def main():
     contents = load_images("lmms-lab/flickr30k", None, "test", N_CONTENT, "image")
     styles, test_styles = split_wikiart(N_STYLE, 16)
     from skimage import data as skdata
-    test_contents = [Image.fromarray(f()).convert("RGB") for f in
-                     (skdata.astronaut, skdata.coffee, skdata.chelsea, skdata.rocket, skdata.immunohistochemistry)]
-    test_contents = [im.resize((max(CROP, int(im.width * 320 / min(im.size))), max(CROP, int(im.height * 320 / min(im.size)))))
-                     for im in test_contents]
+
+    test_contents = [
+        Image.fromarray(f()).convert("RGB")
+        for f in (skdata.astronaut, skdata.coffee, skdata.chelsea, skdata.rocket, skdata.immunohistochemistry)
+    ]
+    test_contents = [
+        im.resize((max(CROP, int(im.width * 320 / min(im.size))), max(CROP, int(im.height * 320 / min(im.size)))))
+        for im in test_contents
+    ]
     print(f"data: {len(contents)} content, {len(styles)} style (+16 held-out) in {(time.time() - t0) / 60:.1f} min")
 
     enc, dec = Encoder().to(DEVICE).eval(), decoder().to(DEVICE)
     opt = torch.optim.Adam(dec.parameters(), lr=1e-4)
-    sched = torch.optim.lr_scheduler.LambdaLR(opt, lambda it: 1 / (1 + 5e-5 * it))   # inverse-time decay (as in the paper's code)
+    sched = torch.optim.lr_scheduler.LambdaLR(
+        opt, lambda it: 1 / (1 + 5e-5 * it)
+    )  # inverse-time decay (as in the paper's code)
     history, it, start = [], 0, time.time()
     while time.time() - start < TIME_BUDGET_MIN * 60:
         with torch.autocast("cuda", dtype=torch.bfloat16):
@@ -255,9 +289,9 @@ def main():
 
     # ---- speed: one 512x512 image ----
     c512 = torch.rand(1, 3, 512, 512, device=DEVICE)
-    for _ in range(3):                         # warm-up
+    for _ in range(3):  # warm-up
         stylize(enc, dec, c512, c512)
-    torch.cuda.synchronize()                   # CUDA is asynchronous: wait before starting the clock
+    torch.cuda.synchronize()  # CUDA is asynchronous: wait before starting the clock
     t = time.time()
     for _ in range(20):
         stylize(enc, dec, c512, c512)
@@ -282,7 +316,7 @@ def main():
     for i in range(n):
         axes[i + 1, 0].imshow(to_img(cs[i]))
         axes[i + 1, 0].set_title("content", fontsize=8)
-        ys = stylize(enc, dec, cs[i:i + 1].repeat(n, 1, 1, 1), ss)
+        ys = stylize(enc, dec, cs[i : i + 1].repeat(n, 1, 1, 1), ss)
         for j in range(n):
             axes[i + 1, j + 1].imshow(to_img(ys[j]))
     fig.tight_layout()
@@ -299,10 +333,17 @@ def main():
     fig.savefig(os.path.join(out_dir, "alpha_tradeoff.jpg"), dpi=80)
     plt.close(fig)
 
-    metrics = {"train_iterations": it, "train_minutes": train_min, "content_images": len(contents),
-               "style_images": len(styles), "heldout_content_loss": float(np.mean(ev_c)),
-               "heldout_style_loss": float(np.mean(ev_s)), "ms_per_512px_image": ms,
-               "decoder_params": sum(p.numel() for p in dec.parameters()), "gpu": torch.cuda.get_device_name(0)}
+    metrics = {
+        "train_iterations": it,
+        "train_minutes": train_min,
+        "content_images": len(contents),
+        "style_images": len(styles),
+        "heldout_content_loss": float(np.mean(ev_c)),
+        "heldout_style_loss": float(np.mean(ev_s)),
+        "ms_per_512px_image": ms,
+        "decoder_params": sum(p.numel() for p in dec.parameters()),
+        "gpu": torch.cuda.get_device_name(0),
+    }
     json.dump({"metrics": metrics, "history": history}, open(os.path.join(out_dir, "metrics.json"), "w"), indent=2)
     torch.save(dec.state_dict(), os.path.expanduser("~/adain_decoder.pt"))
     print(json.dumps(metrics, indent=2))

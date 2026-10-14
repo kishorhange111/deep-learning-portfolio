@@ -7,6 +7,7 @@
   guarded by `if __name__ == "__main__"`, so nothing is trained or downloaded)
   and skips the test when an optional heavy dependency is not installed.
 """
+
 import importlib.util
 import os
 import pathlib
@@ -34,6 +35,6 @@ def load_train(relpath):
     except ModuleNotFoundError as e:
         if e.name and e.name.split(".")[0] == "common":
             raise
-        pytest.skip(f"optional dependency not installed: {e.name}")
+        pytest.skip(f"optional dependency not installed: {e.name}", allow_module_level=True)
     sys.modules[name] = module
     return module

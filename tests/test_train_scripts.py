@@ -5,6 +5,7 @@
 * a `__main__` guard, so importing a script never starts a training run;
 * scripts whose dependencies are installed import cleanly (their `common.*` imports resolve).
 """
+
 import ast
 
 import pytest

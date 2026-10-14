@@ -27,6 +27,7 @@ median latency over 200 runs after warm-up; accuracy on the IMDB test set.
 
 Stack: PyTorch, Hugging Face transformers, ONNX, ONNX Runtime.
 """
+
 import json
 import os
 import platform
@@ -55,7 +56,7 @@ QUICK = os.environ.get("QUICK") == "1"
 OUT = os.path.expanduser("~/checkpoints/bert_opt")
 MAX_LEN = 256
 TEACHER, STUDENT = "bert-base-uncased", "distilbert-base-uncased"
-N_EVAL_CPU = 200 if QUICK else 2000          # test reviews used to measure accuracy of every CPU variant
+N_EVAL_CPU = 200 if QUICK else 2000  # test reviews used to measure accuracy of every CPU variant
 BENCH_RUNS = 20 if QUICK else 200
 TEMPERATURE, ALPHA = 2.0, 0.5
 # Mixed precision: bf16 on Ampere+ GPUs, fp16 on older ones (e.g. T4), fp32 on CPU.
@@ -70,10 +71,22 @@ def train_args(name, epochs):
     remove_unused_columns=False lets the extra `teacher_logits` column reach the collator.
     """
     return TrainingArguments(
-        output_dir=os.path.join(OUT, name), num_train_epochs=epochs, learning_rate=3e-5 if "student" in name else 2e-5,
-        per_device_train_batch_size=32, per_device_eval_batch_size=128, warmup_steps=0.06, weight_decay=0.01,
-        bf16=BF16, fp16=FP16, eval_strategy="no", save_strategy="no", logging_steps=100,
-        report_to="none", seed=42, remove_unused_columns=False)
+        output_dir=os.path.join(OUT, name),
+        num_train_epochs=epochs,
+        learning_rate=3e-5 if "student" in name else 2e-5,
+        per_device_train_batch_size=32,
+        per_device_eval_batch_size=128,
+        warmup_steps=0.06,
+        weight_decay=0.01,
+        bf16=BF16,
+        fp16=FP16,
+        eval_strategy="no",
+        save_strategy="no",
+        logging_steps=100,
+        report_to="none",
+        seed=42,
+        remove_unused_columns=False,
+    )
 
 
 def accuracy_metric(eval_pred):
@@ -90,7 +103,7 @@ class DistillationTrainer(Trainer):
 
         See `common/distillation.py` for the formula.
         """
-        teacher_logits = inputs.pop("teacher_logits", None)   # absent at evaluation time
+        teacher_logits = inputs.pop("teacher_logits", None)  # absent at evaluation time
         outputs = model(**inputs)
         if teacher_logits is None:
             hard = F.cross_entropy(outputs.logits, inputs["labels"])
@@ -108,7 +121,7 @@ def main():
     if QUICK:
         train, test = train.select(range(1000)), test.select(range(500))
     epochs = 1 if QUICK else 2
-    tok = AutoTokenizer.from_pretrained(TEACHER)   # BERT and DistilBERT share the same WordPiece vocab
+    tok = AutoTokenizer.from_pretrained(TEACHER)  # BERT and DistilBERT share the same WordPiece vocab
     tok.model_input_names = ["input_ids", "attention_mask"]  # DistilBERT has no token_type_ids input
 
     def enc(b):
@@ -122,8 +135,13 @@ def main():
 
     # ---- 1) Teacher -----------------------------------------------------------
     teacher = AutoModelForSequenceClassification.from_pretrained(TEACHER, num_labels=2)
-    t_trainer = Trainer(model=teacher, args=train_args("teacher", epochs), train_dataset=train_tok,
-                        data_collator=collator, compute_metrics=accuracy_metric)
+    t_trainer = Trainer(
+        model=teacher,
+        args=train_args("teacher", epochs),
+        train_dataset=train_tok,
+        data_collator=collator,
+        compute_metrics=accuracy_metric,
+    )
     with Timer() as t:
         t_trainer.train()
     times["teacher_train_min"] = t.minutes
@@ -134,8 +152,13 @@ def main():
 
     # ---- 2a) Student without distillation ------------------------------------
     plain = AutoModelForSequenceClassification.from_pretrained(STUDENT, num_labels=2)
-    p_trainer = Trainer(model=plain, args=train_args("student_plain", epochs), train_dataset=train_tok,
-                        data_collator=collator, compute_metrics=accuracy_metric)
+    p_trainer = Trainer(
+        model=plain,
+        args=train_args("student_plain", epochs),
+        train_dataset=train_tok,
+        data_collator=collator,
+        compute_metrics=accuracy_metric,
+    )
     with Timer() as t:
         p_trainer.train()
     times["student_plain_train_min"] = t.minutes
@@ -147,16 +170,20 @@ def main():
     def distill_collator(features):
         """Pad tokenizer fields with the standard collator and add the teacher logits as a float tensor."""
         # The padding collator only keeps tokenizer fields, so carry the teacher logits separately.
-        if "teacher_logits" not in features[0]:          # evaluation batches
+        if "teacher_logits" not in features[0]:  # evaluation batches
             return collator(features)
         logits = torch.tensor([f.pop("teacher_logits") for f in features], dtype=torch.float32)
         batch = collator(features)
         batch["teacher_logits"] = logits
         return batch
 
-    d_trainer = DistillationTrainer(model=student, args=train_args("student_distilled", epochs),
-                                    train_dataset=train_distill, data_collator=distill_collator,
-                                    compute_metrics=accuracy_metric)
+    d_trainer = DistillationTrainer(
+        model=student,
+        args=train_args("student_distilled", epochs),
+        train_dataset=train_distill,
+        data_collator=distill_collator,
+        compute_metrics=accuracy_metric,
+    )
     with Timer() as t:
         d_trainer.train()
     times["student_distilled_train_min"] = t.minutes
@@ -190,14 +217,19 @@ def main():
     write_report(rows, teacher_acc, plain_acc, distilled_acc, times)
 
     best = rows[-1]
-    save_results(PROJECT, {
-        "teacher_test_accuracy": teacher_acc, "student_plain_test_accuracy": plain_acc,
-        "student_distilled_test_accuracy": distilled_acc,
-        "final_latency_reduction_percent": best["latency_reduction_percent"],
-        "final_speedup_x": best["speedup_vs_bert_pytorch"],
-        "final_size_reduction_percent": best["size_reduction_percent"],
-        "final_cpu_accuracy": best["accuracy"], **times,
-    })
+    save_results(
+        PROJECT,
+        {
+            "teacher_test_accuracy": teacher_acc,
+            "student_plain_test_accuracy": plain_acc,
+            "student_distilled_test_accuracy": distilled_acc,
+            "final_latency_reduction_percent": best["latency_reduction_percent"],
+            "final_speedup_x": best["speedup_vs_bert_pytorch"],
+            "final_size_reduction_percent": best["size_reduction_percent"],
+            "final_cpu_accuracy": best["accuracy"],
+            **times,
+        },
+    )
 
 
 def export_onnx(model, tok, path):
@@ -227,15 +259,20 @@ def bench_torch(name, model, tok, texts, labels):
     """Latency (batch 1, 128 tokens), size and accuracy of a PyTorch model on CPU."""
     # Latency is measured on one review padded to exactly 128 tokens (a typical online request).
     one = tok([texts[0]], return_tensors="pt", truncation=True, padding="max_length", max_length=128)
-    with torch.inference_mode():   # like no_grad, plus skips autograd bookkeeping entirely
+    with torch.inference_mode():  # like no_grad, plus skips autograd bookkeeping entirely
         p50, p95 = latency(lambda: model(**one), BENCH_RUNS)
         preds = []
         for i in range(0, len(texts), 32):
-            b = tok(texts[i:i + 32], return_tensors="pt", truncation=True, padding=True, max_length=MAX_LEN)
+            b = tok(texts[i : i + 32], return_tensors="pt", truncation=True, padding=True, max_length=MAX_LEN)
             preds += model(**b).logits.argmax(-1).tolist()
-    size = sum(p.numel() * p.element_size() for p in model.parameters()) / 2**20   # MB of weights in memory
-    return {"variant": name, "latency_ms_p50": p50, "latency_ms_p95": p95, "size_mb": size,
-            "accuracy": float((np.array(preds) == labels).mean())}
+    size = sum(p.numel() * p.element_size() for p in model.parameters()) / 2**20  # MB of weights in memory
+    return {
+        "variant": name,
+        "latency_ms_p50": p50,
+        "latency_ms_p95": p95,
+        "size_mb": size,
+        "accuracy": float((np.array(preds) == labels).mean()),
+    }
 
 
 def bench_onnx(name, path, tok, texts, labels):
@@ -243,7 +280,7 @@ def bench_onnx(name, path, tok, texts, labels):
     import onnxruntime as ort
 
     opts = ort.SessionOptions()
-    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL   # operator fusion
+    opts.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL  # operator fusion
     opts.intra_op_num_threads = os.cpu_count()
     sess = ort.InferenceSession(path, opts, providers=["CPUExecutionProvider"])
 
@@ -255,28 +292,50 @@ def bench_onnx(name, path, tok, texts, labels):
     p50, p95 = latency(lambda: sess.run(None, one), BENCH_RUNS)
     preds = []
     for i in range(0, len(texts), 32):
-        b = feed(tok(texts[i:i + 32], return_tensors="np", truncation=True, padding=True, max_length=MAX_LEN))
+        b = feed(tok(texts[i : i + 32], return_tensors="np", truncation=True, padding=True, max_length=MAX_LEN))
         preds += sess.run(None, b)[0].argmax(-1).tolist()
-    return {"variant": name, "latency_ms_p50": p50, "latency_ms_p95": p95, "size_mb": os.path.getsize(path) / 2**20,
-            "accuracy": float((np.array(preds) == labels).mean())}
+    return {
+        "variant": name,
+        "latency_ms_p50": p50,
+        "latency_ms_p95": p95,
+        "size_mb": os.path.getsize(path) / 2**20,
+        "accuracy": float((np.array(preds) == labels).mean()),
+    }
 
 
 def write_report(rows, teacher_acc, plain_acc, distilled_acc, times):
     """Write benchmark.json, a Markdown table (benchmark.md) and a latency bar chart (latency.png)."""
     out = results_dir(PROJECT)
-    json.dump({"rows": rows, "cpu": platform.processor() or platform.machine(), "threads": os.cpu_count(),
-               "gpu_accuracy": {"teacher": teacher_acc, "student_plain": plain_acc, "student_distilled": distilled_acc},
-               **times}, open(os.path.join(out, "benchmark.json"), "w"), indent=2)
+    json.dump(
+        {
+            "rows": rows,
+            "cpu": platform.processor() or platform.machine(),
+            "threads": os.cpu_count(),
+            "gpu_accuracy": {"teacher": teacher_acc, "student_plain": plain_acc, "student_distilled": distilled_acc},
+            **times,
+        },
+        open(os.path.join(out, "benchmark.json"), "w"),
+        indent=2,
+    )
     with open(os.path.join(out, "benchmark.md"), "w") as f:
-        f.write(f"CPU: {os.cpu_count()} threads · batch 1 · 128 tokens · accuracy on {N_EVAL_CPU} IMDB test reviews\n\n")
-        f.write("| variant | p50 latency (ms) | p95 (ms) | size (MB) | accuracy | speed-up |\n|---|---|---|---|---|---|\n")
+        f.write(
+            f"CPU: {os.cpu_count()} threads · batch 1 · 128 tokens · accuracy on {N_EVAL_CPU} IMDB test reviews\n\n"
+        )
+        f.write(
+            "| variant | p50 latency (ms) | p95 (ms) | size (MB) | accuracy | speed-up |\n|---|---|---|---|---|---|\n"
+        )
         for r in rows:
-            f.write(f"| {r['variant']} | {r['latency_ms_p50']:.1f} | {r['latency_ms_p95']:.1f} | {r['size_mb']:.0f} "
-                    f"| {100 * r['accuracy']:.1f} % | {r['speedup_vs_bert_pytorch']:.1f}x |\n")
-        f.write(f"\nFull test set (25k, GPU): teacher {100 * teacher_acc:.2f} % · DistilBERT without distillation "
-                f"{100 * plain_acc:.2f} % · DistilBERT with distillation {100 * distilled_acc:.2f} %\n")
+            f.write(
+                f"| {r['variant']} | {r['latency_ms_p50']:.1f} | {r['latency_ms_p95']:.1f} | {r['size_mb']:.0f} "
+                f"| {100 * r['accuracy']:.1f} % | {r['speedup_vs_bert_pytorch']:.1f}x |\n"
+            )
+        f.write(
+            f"\nFull test set (25k, GPU): teacher {100 * teacher_acc:.2f} % · DistilBERT without distillation "
+            f"{100 * plain_acc:.2f} % · DistilBERT with distillation {100 * distilled_acc:.2f} %\n"
+        )
 
     import matplotlib
+
     matplotlib.use("Agg")
     import matplotlib.pyplot as plt
 
@@ -284,7 +343,13 @@ def write_report(rows, teacher_acc, plain_acc, distilled_acc, times):
     labels = [r["variant"].replace(" · ", "\n") for r in rows]
     ax.barh(labels, [r["latency_ms_p50"] for r in rows], color=["#999"] * 3 + ["#2a7ab9"] * 3)
     for i, r in enumerate(rows):
-        ax.text(r["latency_ms_p50"], i, f"  {r['latency_ms_p50']:.0f} ms · {100 * r['accuracy']:.1f}%", va="center", fontsize=8)
+        ax.text(
+            r["latency_ms_p50"],
+            i,
+            f"  {r['latency_ms_p50']:.0f} ms · {100 * r['accuracy']:.1f}%",
+            va="center",
+            fontsize=8,
+        )
     ax.invert_yaxis()
     ax.set_xlabel("median CPU latency, batch 1, 128 tokens (ms)")
     fig.tight_layout()
