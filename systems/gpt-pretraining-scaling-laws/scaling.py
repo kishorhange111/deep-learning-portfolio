@@ -193,31 +193,57 @@ def approach2_minima(points):
     }
 
 
-def approach3(points, n_starts=64, seed=0):
-    """Fit L = E + A/N^alpha + B/D^beta (Huber loss on log L, as in Chinchilla) by multi-start L-BFGS.
+def huber_objective(points, delta=1e-3):
+    """f(theta) -> (Huber loss of log-space residuals, exact gradient), theta = (a, b, e, alpha, beta) with
+    log L_pred = logsumexp(a - alpha log N, b - beta log D, e)."""
+    from scipy.special import softmax
 
-    Parameterised as E = exp(e), A = exp(a), B = exp(b) so all three stay positive."""
-    from scipy.optimize import minimize
-    from scipy.special import logsumexp
-
-    n = np.array([p["N"] for p in points], dtype=float)
-    d = np.array([p["D"] for p in points], dtype=float)
+    log_n = np.log(np.array([p["N"] for p in points], dtype=float))
+    log_d = np.log(np.array([p["D"] for p in points], dtype=float))
     log_l = np.log(np.array([p["loss"] for p in points], dtype=float))
 
-    def objective(theta):
+    def objective_and_grad(theta):
         a, b, e, alpha, beta = theta
-        pred = logsumexp([a - alpha * np.log(n), b - beta * np.log(d), np.full_like(n, e)], axis=0)
+        terms = np.stack([a - alpha * log_n, b - beta * log_d, np.full_like(log_n, e)])  # (3, points)
+        top = terms.max(0)
+        pred = top + np.log(np.exp(terms - top).sum(0))  # log-sum-exp
         r = pred - log_l
-        delta = 1e-3
-        return np.where(np.abs(r) <= delta, 0.5 * r**2, delta * (np.abs(r) - 0.5 * delta)).sum()
+        huber = np.where(np.abs(r) <= delta, 0.5 * r**2, delta * (np.abs(r) - 0.5 * delta))
+        dr = np.clip(r, -delta, delta)  # dHuber/dr
+        w = softmax(terms, axis=0)  # dpred/dterm
+        grad = np.array(
+            [
+                (dr * w[0]).sum(),
+                (dr * w[1]).sum(),
+                (dr * w[2]).sum(),
+                -(dr * w[0] * log_n).sum(),
+                -(dr * w[1] * log_d).sum(),
+            ]
+        )
+        return huber.sum(), grad
 
+    return objective_and_grad
+
+
+def approach3(points, n_starts=64, seed=0, delta=1e-3):
+    """Fit L = E + A/N^alpha + B/D^beta (Huber loss on log L, as in Chinchilla) by multi-start L-BFGS.
+
+    Parameterised as E = exp(e), A = exp(a), B = exp(b) so all three stay positive. The objective's
+    gradient is computed exactly: with finite-difference gradients the optimiser stalls in flat regions
+    (log-sum-exp dominated by one term, Huber's linear tails) and about a quarter of seeds ended on a
+    wrong fit. `converged_starts` reports how many starts reached the best objective, a check on
+    whether the fit is well identified."""
+    from scipy.optimize import minimize
+
+    objective_and_grad = huber_objective(points, delta)
     rng = np.random.default_rng(seed)
-    best = None
+    bounds = [(-5, 40), (-5, 40), (-3, 3), (0.01, 3), (0.01, 3)]
+    options = {"ftol": 1e-15, "gtol": 1e-12, "maxiter": 20000}
+    fits = []
     for _ in range(n_starts):
         x0 = [rng.uniform(0, 25), rng.uniform(0, 25), rng.uniform(-1, 1.5), rng.uniform(0, 2), rng.uniform(0, 2)]
-        res = minimize(objective, x0, method="L-BFGS-B", bounds=[(-5, 40), (-5, 40), (-3, 3), (0.01, 3), (0.01, 3)])
-        if best is None or res.fun < best.fun:
-            best = res
+        fits.append(minimize(objective_and_grad, x0, jac=True, method="L-BFGS-B", bounds=bounds, options=options))
+    best = min(fits, key=lambda f: f.fun)
     a, b, e, alpha, beta = best.x
     return {
         "E": float(np.exp(e)),
@@ -227,6 +253,7 @@ def approach3(points, n_starts=64, seed=0):
         "beta": float(beta),
         "exponent": float(beta / (alpha + beta)),
         "objective": float(best.fun),
+        "converged_starts": int(sum(f.fun <= best.fun * 1.01 + 1e-12 for f in fits)),
     }
 
 
