@@ -33,7 +33,7 @@ import os
 import platform
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import numpy as np
 import torch
@@ -47,9 +47,9 @@ from transformers import (
     TrainingArguments,
 )
 
-from common.benchmark import latency
-from common.distillation import distillation_loss
-from common.utils import Timer, results_dir, save_results, set_seed
+from dl_common.benchmark import latency
+from dl_common.distillation import distillation_loss
+from dl_common.utils import Timer, results_dir, save_results, set_seed
 
 PROJECT = "10_bert_distillation_onnx_quantization"
 QUICK = os.environ.get("QUICK") == "1"
@@ -101,7 +101,7 @@ class DistillationTrainer(Trainer):
     def compute_loss(self, model, inputs, return_outputs=False, **kwargs):
         """Distillation loss when the batch carries teacher logits, plain cross-entropy otherwise.
 
-        See `common/distillation.py` for the formula.
+        See `src/dl_common/distillation.py` for the formula.
         """
         teacher_logits = inputs.pop("teacher_logits", None)  # absent at evaluation time
         outputs = model(**inputs)

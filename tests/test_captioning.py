@@ -1,8 +1,8 @@
-"""Tests for caption cleaning, parsing, decoding and BLEU (common/captioning.py)."""
+"""Tests for caption cleaning, parsing, decoding and BLEU (src/dl_common/captioning.py)."""
 
 import pytest
 
-from common.captioning import bleu_scores, clean_caption, parse_flickr_tokens, tokens_to_caption
+from dl_common.captioning import bleu_scores, clean_caption, parse_flickr_tokens, tokens_to_caption
 
 
 def test_clean_caption():

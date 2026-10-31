@@ -34,12 +34,18 @@ Every project is a single, heavily commented `train.py` written to be read top t
 
 ## Layout
 ```
-computer-vision/<project>/   train.py · README.md · results/
-nlp/<project>/               train.py · README.md · results/
-generative-models/<project>/ train.py · README.md · results/
-common/                      shared helpers: seeding, GPU time budgets, metrics + plots (utils.py),
-                             caption parsing + BLEU, triplet metrics, distillation loss, latency benchmark
-tests/                       CPU-only pytest suite (Keras runs on the PyTorch backend; no GPU, no downloads)
+deep-learning-portfolio/
+├── computer-vision/<project>/    # train.py · README.md · results/
+├── nlp/<project>/                # train.py · README.md · results/
+├── generative-models/<project>/  # train.py · README.md · results/
+├── src/dl_common/                # shared helpers: seeding, GPU time budgets, metrics + plots (utils.py),
+│                                 #   caption parsing + BLEU, triplet metrics, distillation loss, latency benchmark
+├── tests/                        # CPU-only pytest suite (Keras runs on the PyTorch backend; no GPU, no downloads)
+├── .github/workflows/            # CI: ruff lint + format check, byte-compile every script, tests
+├── Makefile                      # make install / install-dev / lint / format / test
+├── pyproject.toml                # package metadata (src/dl_common), ruff + pytest config
+├── requirements.txt              # runtime stack for the training scripts
+└── requirements-dev.txt          # lint + test tooling
 ```
 
 ## Engineering practices
@@ -59,12 +65,11 @@ Trained on Google Colab GPUs (NVIDIA A100, L4, T4) with Keras 3 / TensorFlow and
 
 ## Development
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements-dev.txt
-ruff check .        # lint
-pytest              # unit tests: losses, tokenizers, metrics, layers, schedules - CPU only
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # CPU build is enough for the tests
+make install-dev    # = pip install -r requirements-dev.txt -e .  (installs the shared helpers package)
+make check          # ruff lint + format check, then pytest (CPU only, no downloads)
 ```
-CI (GitHub Actions) runs `ruff check`, byte-compiles every `train.py` and runs the test suite on every push.
+CI (GitHub Actions) runs the same checks, plus a byte-compile of every `train.py`, on every push and pull request. Optional: `pip install pre-commit && pre-commit install` runs ruff before each commit.
 
 ## Credits
 Several projects re-implement or extend [Keras code examples](https://keras.io/examples/) (Apache-2.0) — some rewritten in PyTorch, all extended with additional evaluation, baselines and documentation. Original authors are credited in each project.

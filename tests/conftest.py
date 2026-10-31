@@ -1,6 +1,7 @@
 """Shared pytest setup.
 
-* Makes the repository root importable (`import common`).
+* `src/` (the `dl_common` package) is put on the import path by the
+  `pythonpath` setting in pyproject.toml.
 * Runs Keras on the PyTorch backend so the Keras projects can be tested on a
   CPU-only machine without installing TensorFlow.
 * `load_train(...)` imports a project's train.py as a module (its `main()` is
@@ -19,7 +20,6 @@ os.environ.setdefault("KERAS_BACKEND", "torch")
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT))
 
 
 def load_train(relpath):
@@ -33,7 +33,7 @@ def load_train(relpath):
     try:
         spec.loader.exec_module(module)
     except ModuleNotFoundError as e:
-        if e.name and e.name.split(".")[0] == "common":
+        if e.name and e.name.split(".")[0] == "dl_common":
             raise
         pytest.skip(f"optional dependency not installed: {e.name}", allow_module_level=True)
     sys.modules[name] = module
