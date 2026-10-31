@@ -1,0 +1,47 @@
+name: Agent eval (real models)
+
+# Manual only: runs the SQL agent eval against real model APIs using repository secrets.
+# Every-push CI (ci.yml) covers the same code with scripted models and needs no keys.
+on:
+  workflow_dispatch:
+    inputs:
+      models:
+        description: "Space-separated model specs, e.g. anthropic:claude-opus-5-5 openai:<model>"
+        default: "anthropic:claude-opus-5-5"
+      defenses:
+        description: "Space-separated defenses"
+        default: "none spotlight sanitize confirm"
+      limit:
+        description: "Tasks per suite (empty = all 25 + 10)"
+        default: "10"
+
+permissions:
+  contents: read
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: applied-ai/sql-analyst-agent
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: pip install -r requirements.txt numpy matplotlib
+      - name: Run eval
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          XAI_API_KEY: ${{ secrets.XAI_API_KEY }}
+          MODELS: ${{ inputs.models }}
+          DEFENSES: ${{ inputs.defenses }}
+          LIMIT: ${{ inputs.limit }}
+        # inputs reach the shell only through environment variables, never interpolated into the script
+        run: python eval_agent.py --models $MODELS --defenses $DEFENSES ${LIMIT:+--limit "$LIMIT"} --run ci
+      - uses: actions/upload-artifact@v4
+        with:
+          name: agent-eval-results
+          path: applied-ai/sql-analyst-agent/results/ci

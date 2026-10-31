@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ShopCo Data Analyst</title>
+<style>
+  :root {
+    --bg: #f9f9f7; --surface: #fcfcfb; --ink: #0b0b0b; --ink-2: #52514e; --muted: #898781;
+    --line: #e1e0d9; --accent: #2a78d6; --code-bg: #f0efec; --error: #d03b3b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+      --line: #2c2c2a; --accent: #3987e5; --code-bg: #262624; --error: #e66767;
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg: #0d0d0d; --surface: #1a1a19; --ink: #f0efec; --ink-2: #c3c2b7; --muted: #898781;
+    --line: #2c2c2a; --accent: #3987e5; --code-bg: #262624; --error: #e66767;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 820px; margin: 0 auto; padding: 32px 16px 64px; }
+  h1 { font-size: 22px; margin: 0 0 4px; }
+  .sub { color: var(--ink-2); margin: 0 0 20px; }
+  form { display: flex; gap: 8px; }
+  input { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px;
+          background: var(--surface); color: var(--ink); font: inherit; }
+  button { padding: 10px 16px; border: 0; border-radius: 8px; background: var(--accent); color: #fff; font: inherit; cursor: pointer; }
+  button:disabled { opacity: .6; cursor: progress; }
+  .examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0 24px; }
+  .examples button { background: var(--surface); color: var(--ink-2); border: 1px solid var(--line); padding: 4px 10px; font-size: 13px; }
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 16px; }
+  .answer { font-size: 17px; }
+  pre { background: var(--code-bg); padding: 10px; border-radius: 6px; overflow-x: auto; font-size: 13px; margin: 8px 0 0; }
+  details { border-top: 1px solid var(--line); padding: 8px 0; }
+  summary { cursor: pointer; color: var(--ink-2); }
+  .meta { color: var(--muted); font-size: 13px; font-variant-numeric: tabular-nums; }
+  .error { color: var(--error); }
+  .label { font-size: 12px; text-transform: uppercase; letter-spacing: .04em; color: var(--muted); margin-top: 12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>ShopCo data analyst</h1>
+  <p class="sub">Ask a question about ShopCo's (synthetic) sales data. An LLM agent writes and runs read-only SQL, then answers with the query that backs it.</p>
+  <form id="f"><input id="q" placeholder="e.g. Which product category generated the most revenue?" autocomplete="off"><button id="go">Ask</button></form>
+  <div class="examples" id="ex"></div>
+  <div id="out"></div>
+</main>
+<script>
+const examples = ["How many orders were cancelled?", "Show monthly revenue for 2025, in month order.",
+  "Which customer spent the most in total, and how much?", "What is the gross profit for each product category?"];
+const ex = document.getElementById("ex"), out = document.getElementById("out");
+examples.forEach(t => { const b = document.createElement("button"); b.type = "button"; b.textContent = t;
+  b.onclick = () => { document.getElementById("q").value = t; ask(); }; ex.appendChild(b); });
+document.getElementById("f").onsubmit = e => { e.preventDefault(); ask(); };
+
+function el(tag, cls, text) { const n = document.createElement(tag); if (cls) n.className = cls; if (text !== undefined) n.textContent = text; return n; }
+
+async function ask() {
+  const q = document.getElementById("q").value.trim(); if (!q) return;
+  const go = document.getElementById("go"); go.disabled = true; go.textContent = "Thinking…";
+  try {
+    const r = await fetch("/api/ask", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ question: q }) });
+    const d = await r.json();
+    const card = el("div", "card");
+    card.appendChild(el("div", "label", "Question")); card.appendChild(el("div", "", q));
+    card.appendChild(el("div", "label", "Answer"));
+    card.appendChild(el("div", d.answer ? "answer" : "answer error", d.answer || (d.error || d.detail || "No answer (" + d.status + ")")));
+    if (d.sql) { card.appendChild(el("div", "label", "Supporting SQL")); card.appendChild(el("pre", "", d.sql)); }
+    (d.steps || []).forEach((s, i) => {
+      const det = el("details"); det.appendChild(el("summary", "", `Step ${i + 1}: ${s.tool}${s.is_error ? " (error)" : ""}`));
+      det.appendChild(el("pre", "", JSON.stringify(s.args, null, 2))); det.appendChild(el("pre", "", s.result)); card.appendChild(det);
+    });
+    if (d.usage) {
+      const cost = d.cost_usd == null ? "cost n/a" : `$${d.cost_usd.toFixed(4)} (without caching $${d.cost_without_caching_usd.toFixed(4)})`;
+      card.appendChild(el("div", "meta", `${d.model} · ${d.usage.llm_calls} model calls · ${d.usage.input_tokens + d.usage.cache_read_tokens + d.usage.cache_write_tokens} input tokens (${d.usage.cache_read_tokens} from cache) · ${d.usage.output_tokens} output · ${d.latency_s}s · ${cost}`));
+    }
+    out.prepend(card);
+  } catch (err) { out.prepend(el("div", "card error", String(err))); }
+  finally { go.disabled = false; go.textContent = "Ask"; }
+}
+</script>
+</body>
+</html>
