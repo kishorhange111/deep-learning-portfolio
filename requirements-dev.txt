@@ -13,3 +13,7 @@ transformers>=4.57,<6
 scipy>=1.11,<2
 # Triton kernels are tested on CPU through the Triton interpreter (TRITON_INTERPRET=1)
 triton>=3.1
+# Marathi eval and SQL agent: provider SDKs (tests use mock transports, no API keys) and romanization
+anthropic>=2,<3
+openai>=1.50,<4
+indic-transliteration>=2.3
