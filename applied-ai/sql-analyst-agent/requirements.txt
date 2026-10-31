@@ -1,0 +1,6 @@
+# web app + agent (the Docker image installs only these)
+anthropic>=2,<3
+openai>=1.50,<4
+fastapi>=0.115
+uvicorn[standard]>=0.30
+mcp>=2,<3

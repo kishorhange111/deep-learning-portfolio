@@ -17,3 +17,7 @@ triton>=3.1
 anthropic>=2,<3
 openai>=1.50,<4
 indic-transliteration>=2.3
+# SQL agent web app and MCP server tests
+fastapi>=0.115
+httpx>=0.27
+mcp>=2,<3
