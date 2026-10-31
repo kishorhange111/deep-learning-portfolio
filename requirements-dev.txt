@@ -7,3 +7,5 @@ numpy>=1.26,<3
 pillow>=10,<12
 matplotlib>=3.8,<4
 nltk>=3.8,<4
+# tiny randomly initialised Hugging Face models (common/tiny_hf.py) for the LLM projects' tests
+transformers>=4.57,<6
