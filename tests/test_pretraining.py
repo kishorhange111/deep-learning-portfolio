@@ -184,12 +184,30 @@ def test_approach2_recovers_known_exponent():
     assert lo <= a2["exponent"] <= hi
 
 
-def test_approach3_recovers_known_exponent():
+@pytest.mark.parametrize("seed", range(5))
+def test_approach3_recovers_known_law_for_every_seed(seed):
+    """Regression test: with finite-difference gradients ~1 in 4 seeds stalled on a wrong fit (seen in CI)."""
     pytest.importorskip("scipy")
     scaling = load_module(PROJECT, "scaling.py")
-    a3 = scaling.approach3(synthetic_isoflop(scaling), n_starts=32)
-    assert a3["exponent"] == pytest.approx(0.28 / 0.62, abs=0.03)
-    assert a3["E"] == pytest.approx(1.7, abs=0.1)
+    a3 = scaling.approach3(synthetic_isoflop(scaling), n_starts=32, seed=seed)
+    assert a3["exponent"] == pytest.approx(0.28 / 0.62, abs=0.005)
+    assert a3["E"] == pytest.approx(1.7, abs=0.01) and a3["alpha"] == pytest.approx(0.34, abs=0.01)
+    assert a3["converged_starts"] >= 2
+
+
+def test_huber_objective_gradient_is_exact():
+    pytest.importorskip("scipy")
+    from scipy.optimize import check_grad
+
+    scaling = load_module(PROJECT, "scaling.py")
+    f = scaling.huber_objective(synthetic_isoflop(scaling))
+    rng = np.random.default_rng(0)
+    for _ in range(5):
+        theta = np.array(
+            [rng.uniform(2, 10), rng.uniform(2, 10), rng.uniform(0, 1), rng.uniform(0.2, 0.6), rng.uniform(0.2, 0.6)]
+        )
+        err = check_grad(lambda x: f(x)[0], lambda x: f(x)[1], theta, epsilon=1e-7)
+        assert err < 1e-4 * max(1.0, np.linalg.norm(f(theta)[1]))
 
 
 def test_fit_writes_summary_and_figures(tmp_path):
