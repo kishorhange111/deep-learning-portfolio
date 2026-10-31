@@ -18,6 +18,9 @@ import pytest
 
 os.environ.setdefault("KERAS_BACKEND", "torch")
 os.environ.setdefault("CUDA_VISIBLE_DEVICES", "")
+# Run Triton kernels through Triton's CPU interpreter. Triton reads this when it is first imported,
+# and other test modules can import it indirectly, so it must be set before any test module loads.
+os.environ.setdefault("TRITON_INTERPRET", "1")
 
 ROOT = pathlib.Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
