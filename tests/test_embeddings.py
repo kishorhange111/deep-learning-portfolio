@@ -1,9 +1,9 @@
-"""Tests for the triplet evaluation helper (common/embeddings.py)."""
+"""Tests for the triplet evaluation helper (src/dl_common/embeddings.py)."""
 
 import numpy as np
 import pytest
 
-from common.embeddings import l2_normalize, triplet_batch_stats
+from dl_common.embeddings import l2_normalize, triplet_batch_stats
 
 
 def test_l2_normalize():

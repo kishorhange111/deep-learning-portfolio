@@ -31,14 +31,14 @@ import sys
 import tarfile
 import urllib.request
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import keras
 import numpy as np
 import tensorflow as tf
 from keras import layers
 
-from common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
+from dl_common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
 
 PROJECT = "03_unet_pet_segmentation"
 QUICK = os.environ.get("QUICK") == "1"

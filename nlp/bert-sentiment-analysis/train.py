@@ -34,7 +34,7 @@ import json
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import numpy as np
 import torch
@@ -50,7 +50,7 @@ from transformers import (
     TrainingArguments,
 )
 
-from common.utils import Timer, results_dir, save_results, set_seed
+from dl_common.utils import Timer, results_dir, save_results, set_seed
 
 PROJECT = "08_bert_sentiment_imdb"
 QUICK = os.environ.get("QUICK") == "1"

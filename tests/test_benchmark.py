@@ -1,6 +1,6 @@
-"""Tests for the latency helper (common/benchmark.py)."""
+"""Tests for the latency helper (src/dl_common/benchmark.py)."""
 
-from common.benchmark import latency
+from dl_common.benchmark import latency
 
 
 def test_latency_counts_warmup_and_runs():

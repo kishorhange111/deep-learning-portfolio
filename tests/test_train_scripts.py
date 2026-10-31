@@ -3,7 +3,7 @@
 * valid Python with a module docstring;
 * every function and class has a docstring;
 * a `__main__` guard, so importing a script never starts a training run;
-* scripts whose dependencies are installed import cleanly (their `common.*` imports resolve).
+* scripts whose dependencies are installed import cleanly (their `dl_common.*` imports resolve).
 """
 
 import ast

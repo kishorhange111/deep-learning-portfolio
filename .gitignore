@@ -12,3 +12,9 @@ computer-vision/image-captioning-cnn-transformer/results/sample_captions.png
 .ruff_cache/
 .pytest_cache/
 .venv/
+build/
+dist/
+*.egg-info/
+.coverage
+.ipynb_checkpoints/
+.env

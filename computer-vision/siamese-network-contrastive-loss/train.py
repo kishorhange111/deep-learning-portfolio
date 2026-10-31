@@ -29,13 +29,13 @@ import os
 import random
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import keras
 import numpy as np
 from keras import layers, ops
 
-from common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
+from dl_common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
 
 PROJECT = "05_siamese_contrastive_mnist"
 QUICK = os.environ.get("QUICK") == "1"
