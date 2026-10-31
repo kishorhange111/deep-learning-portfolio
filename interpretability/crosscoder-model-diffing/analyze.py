@@ -21,8 +21,8 @@ import torch
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
 sys.path.insert(0, os.path.join(HERE, "..", ".."))
+from activations import ActivationData  # noqa: E402
 from crosscoder import Crosscoder, classify, decoder_cosines, relative_norms  # noqa: E402
-from train import ActivationData  # noqa: E402
 
 
 def load_run(run_dir, device):
