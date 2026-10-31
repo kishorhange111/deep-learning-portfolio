@@ -63,10 +63,12 @@ def write_planted_dataset(out_dir, n=60000, d=32, n_shared=24, n_only=6, p=0.04,
     g = torch.Generator().manual_seed(seed)
 
     def directions(k):
+        """k random unit vectors."""
         v = torch.randn(k, d, generator=g)
         return v / v.norm(dim=-1, keepdim=True)
 
     def coefficients(k):
+        """Sparse non-negative activations: each feature is on with probability p."""
         return (torch.rand(n, k, generator=g) < p).float() * (0.5 + torch.rand(n, k, generator=g))
 
     shared_a, shared_b, only_a, only_b = (
