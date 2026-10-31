@@ -1,0 +1,256 @@
+{
+ "summary": {
+  "alive": 128,
+  "A-only": 20,
+  "B-only": 15,
+  "shared": 56,
+  "shared_cosine_median": 0.016676276922225952
+ },
+ "latents": {
+  "28": {
+   "class": "B-only",
+   "relative_norm": 0.9987410306930542,
+   "frequency": 0.043049998581409454,
+   "max_activation": 1.1527609825134277,
+   "contexts": []
+  },
+  "82": {
+   "class": "B-only",
+   "relative_norm": 0.9986628890037537,
+   "frequency": 0.041999999433755875,
+   "max_activation": 0.6432611346244812,
+   "contexts": []
+  },
+  "110": {
+   "class": "B-only",
+   "relative_norm": 0.9985606074333191,
+   "frequency": 0.041999999433755875,
+   "max_activation": 0.7766578793525696,
+   "contexts": []
+  },
+  "27": {
+   "class": "B-only",
+   "relative_norm": 0.9991280436515808,
+   "frequency": 0.04190000146627426,
+   "max_activation": 1.2082524299621582,
+   "contexts": []
+  },
+  "69": {
+   "class": "B-only",
+   "relative_norm": 0.9983855485916138,
+   "frequency": 0.04190000146627426,
+   "max_activation": 0.4146280586719513,
+   "contexts": []
+  },
+  "44": {
+   "class": "B-only",
+   "relative_norm": 0.9980716705322266,
+   "frequency": 0.04154999926686287,
+   "max_activation": 0.9740850329399109,
+   "contexts": []
+  },
+  "70": {
+   "class": "B-only",
+   "relative_norm": 0.9984477758407593,
+   "frequency": 0.04100000113248825,
+   "max_activation": 0.48301488161087036,
+   "contexts": []
+  },
+  "29": {
+   "class": "B-only",
+   "relative_norm": 0.9982942938804626,
+   "frequency": 0.04039999842643738,
+   "max_activation": 0.7805448174476624,
+   "contexts": []
+  },
+  "99": {
+   "class": "B-only",
+   "relative_norm": 0.9983903765678406,
+   "frequency": 0.040300000458955765,
+   "max_activation": 0.40153080224990845,
+   "contexts": []
+  },
+  "63": {
+   "class": "B-only",
+   "relative_norm": 0.9985736608505249,
+   "frequency": 0.039250001311302185,
+   "max_activation": 0.7651898860931396,
+   "contexts": []
+  },
+  "47": {
+   "class": "B-only",
+   "relative_norm": 0.9985901117324829,
+   "frequency": 0.03880000114440918,
+   "max_activation": 0.8524232506752014,
+   "contexts": []
+  },
+  "120": {
+   "class": "B-only",
+   "relative_norm": 0.9984047412872314,
+   "frequency": 0.03864999860525131,
+   "max_activation": 0.6772444844245911,
+   "contexts": []
+  },
+  "115": {
+   "class": "B-only",
+   "relative_norm": 0.9978574514389038,
+   "frequency": 0.03685000166296959,
+   "max_activation": 0.2733510732650757,
+   "contexts": []
+  },
+  "58": {
+   "class": "B-only",
+   "relative_norm": 0.9903578758239746,
+   "frequency": 0.005049999803304672,
+   "max_activation": 0.3162270188331604,
+   "contexts": []
+  },
+  "48": {
+   "class": "B-only",
+   "relative_norm": 0.9114790558815002,
+   "frequency": 0.0017000000225380063,
+   "max_activation": 0.13608568906784058,
+   "contexts": []
+  },
+  "26": {
+   "class": "A-only",
+   "relative_norm": 0.0009460386936552823,
+   "frequency": 0.04114999994635582,
+   "max_activation": 1.1418006420135498,
+   "contexts": []
+  },
+  "74": {
+   "class": "A-only",
+   "relative_norm": 0.08956588804721832,
+   "frequency": 0.040150001645088196,
+   "max_activation": 0.49301639199256897,
+   "contexts": []
+  },
+  "89": {
+   "class": "A-only",
+   "relative_norm": 0.0009645754471421242,
+   "frequency": 0.03945000097155571,
+   "max_activation": 0.9841905236244202,
+   "contexts": []
+  },
+  "68": {
+   "class": "A-only",
+   "relative_norm": 0.0013067119289189577,
+   "frequency": 0.03920000046491623,
+   "max_activation": 0.3740720748901367,
+   "contexts": []
+  },
+  "24": {
+   "class": "A-only",
+   "relative_norm": 0.0013172220205888152,
+   "frequency": 0.03914999961853027,
+   "max_activation": 1.1468206644058228,
+   "contexts": []
+  },
+  "93": {
+   "class": "A-only",
+   "relative_norm": 0.00164791161660105,
+   "frequency": 0.03914999961853027,
+   "max_activation": 0.9287886619567871,
+   "contexts": []
+  },
+  "31": {
+   "class": "A-only",
+   "relative_norm": 0.0012661830987781286,
+   "frequency": 0.039000000804662704,
+   "max_activation": 0.5718477368354797,
+   "contexts": []
+  },
+  "104": {
+   "class": "A-only",
+   "relative_norm": 0.0022950086276978254,
+   "frequency": 0.03844999894499779,
+   "max_activation": 0.9217734336853027,
+   "contexts": []
+  },
+  "75": {
+   "class": "A-only",
+   "relative_norm": 0.001213751849718392,
+   "frequency": 0.03844999894499779,
+   "max_activation": 0.6617264151573181,
+   "contexts": []
+  },
+  "49": {
+   "class": "A-only",
+   "relative_norm": 0.0015423703007400036,
+   "frequency": 0.03815000131726265,
+   "max_activation": 0.4747193455696106,
+   "contexts": []
+  },
+  "25": {
+   "class": "A-only",
+   "relative_norm": 0.001131141558289528,
+   "frequency": 0.03655000030994415,
+   "max_activation": 1.1198780536651611,
+   "contexts": []
+  },
+  "73": {
+   "class": "A-only",
+   "relative_norm": 0.002419887576252222,
+   "frequency": 0.034699998795986176,
+   "max_activation": 0.3292611837387085,
+   "contexts": []
+  },
+  "53": {
+   "class": "A-only",
+   "relative_norm": 0.002714027650654316,
+   "frequency": 0.03254999965429306,
+   "max_activation": 0.2951514720916748,
+   "contexts": []
+  },
+  "57": {
+   "class": "A-only",
+   "relative_norm": 0.0019465491641312838,
+   "frequency": 0.031150000169873238,
+   "max_activation": 0.30396997928619385,
+   "contexts": []
+  },
+  "86": {
+   "class": "A-only",
+   "relative_norm": 0.08119144290685654,
+   "frequency": 0.004050000105053186,
+   "max_activation": 0.19589479267597198,
+   "contexts": []
+  },
+  "1": {
+   "class": "shared",
+   "relative_norm": 0.48115015029907227,
+   "frequency": 0.04374999925494194,
+   "max_activation": 1.4822909832000732,
+   "contexts": []
+  },
+  "12": {
+   "class": "shared",
+   "relative_norm": 0.45117858052253723,
+   "frequency": 0.043150000274181366,
+   "max_activation": 1.243674635887146,
+   "contexts": []
+  },
+  "79": {
+   "class": "shared",
+   "relative_norm": 0.647059977054596,
+   "frequency": 0.04270000010728836,
+   "max_activation": 0.8084017038345337,
+   "contexts": []
+  },
+  "91": {
+   "class": "shared",
+   "relative_norm": 0.4139025807380676,
+   "frequency": 0.04244999960064888,
+   "max_activation": 1.3309779167175293,
+   "contexts": []
+  },
+  "23": {
+   "class": "shared",
+   "relative_norm": 0.4917355179786682,
+   "frequency": 0.04205000028014183,
+   "max_activation": 1.2314361333847046,
+   "contexts": []
+  }
+ }
+}

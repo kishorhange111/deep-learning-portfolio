@@ -15,3 +15,7 @@ computer-vision/image-captioning-cnn-transformer/results/sample_captions.png
 # pretraining: tokenised data shards and model checkpoints are regenerated, not committed
 systems/gpt-pretraining-scaling-laws/data/
 ckpt.pt
+# crosscoder: activation dumps and model files are regenerated, not committed
+interpretability/crosscoder-model-diffing/data/
+planted_data/
+crosscoder.pt
