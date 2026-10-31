@@ -9,3 +9,5 @@ matplotlib>=3.8,<4
 nltk>=3.8,<4
 # tiny randomly initialised Hugging Face models (common/tiny_hf.py) for the LLM projects' tests
 transformers>=4.57,<6
+# scaling-law fits (systems/gpt-pretraining-scaling-laws)
+scipy>=1.11,<2
