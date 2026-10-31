@@ -12,3 +12,6 @@ computer-vision/image-captioning-cnn-transformer/results/sample_captions.png
 .ruff_cache/
 .pytest_cache/
 .venv/
+# pretraining: tokenised data shards and model checkpoints are regenerated, not committed
+systems/gpt-pretraining-scaling-laws/data/
+ckpt.pt
