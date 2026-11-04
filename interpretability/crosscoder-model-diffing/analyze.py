@@ -20,7 +20,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 from activations import ActivationData  # noqa: E402
 from crosscoder import Crosscoder, classify, decoder_cosines, relative_norms  # noqa: E402
 
@@ -71,7 +71,7 @@ def context_strings(data_dir, meta, rows, width=12, tokenizer=None):
 
 def plot_histograms(r, cos, alive, shared, out_dir):
     """Relative-norm histogram (all live latents) and decoder-cosine histogram (shared latents)."""
-    from common.plotting import MUTED, apply_style
+    from dl_common.plotting import MUTED, apply_style
 
     plt = apply_style()
     fig, axes = plt.subplots(1, 2, figsize=(11, 3.8))

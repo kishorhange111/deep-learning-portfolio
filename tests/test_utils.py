@@ -1,4 +1,4 @@
-"""Tests for common/utils.py: seeding, output folder, results files, timers."""
+"""Tests for src/dl_common/utils.py: seeding, output folder, results files, timers."""
 
 import json
 import time
@@ -6,7 +6,7 @@ import time
 import numpy as np
 import pytest
 
-from common import utils
+from dl_common import utils
 
 
 def test_set_seed_is_reproducible():

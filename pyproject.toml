@@ -1,3 +1,9 @@
+# The shared helpers in src/dl_common are an installable package (`pip install -e .`);
+# the project folders are standalone scripts, not packages.
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
 [project]
 name = "deep-learning-portfolio"
 version = "0.1.0"
@@ -5,6 +11,16 @@ description = "Computer-vision, NLP and generative-model projects, each trained,
 readme = "README.md"
 license = { file = "LICENSE" }
 requires-python = ">=3.10"
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<10", "ruff>=0.6,<1"]
+
+[project.urls]
+Repository = "https://github.com/kishorhange111/deep-learning-portfolio"
+
+# Only src/ is a package; the project folders hold standalone train.py scripts.
+[tool.setuptools.packages.find]
+where = ["src"]
 
 [tool.ruff]
 line-length = 120
@@ -23,10 +39,11 @@ ignore = [
 "**/train.py" = ["E501"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["common"]
+known-first-party = ["dl_common"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+pythonpath = ["src"]
 addopts = "-ra"
 filterwarnings = [
     # Keras-on-PyTorch converts tensors with np.array(x); harmless NumPy 2 deprecation notice

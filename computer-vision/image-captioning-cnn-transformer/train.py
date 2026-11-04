@@ -40,15 +40,15 @@ import sys
 import urllib.request
 import zipfile
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import keras
 import numpy as np
 import tensorflow as tf
 from keras import layers, ops
 
-from common.captioning import bleu_scores, parse_flickr_tokens, tokens_to_caption
-from common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
+from dl_common.captioning import bleu_scores, parse_flickr_tokens, tokens_to_caption
+from dl_common.utils import Timer, make_time_limit_callback, results_dir, save_results, set_seed
 
 PROJECT = "04_image_captioning_flickr8k"
 QUICK = os.environ.get("QUICK") == "1"

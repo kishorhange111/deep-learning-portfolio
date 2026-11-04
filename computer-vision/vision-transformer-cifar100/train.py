@@ -26,12 +26,12 @@ https://keras.io/examples/vision/image_classification_with_vision_transformer/
 import os
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import keras
 from keras import layers, ops
 
-from common.utils import Timer, load_cifar, make_time_limit_callback, save_results, set_seed
+from dl_common.utils import Timer, load_cifar, make_time_limit_callback, save_results, set_seed
 
 PROJECT = "01_vision_transformer_cifar100"
 QUICK = os.environ.get("QUICK") == "1"  # QUICK=1 -> tiny run to test the pipeline

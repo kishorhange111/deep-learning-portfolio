@@ -21,8 +21,8 @@ import sys
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
-from common.plotting import INK_2, MUTED, ColorMap, apply_style  # noqa: E402
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
+from dl_common.plotting import INK_2, MUTED, ColorMap, apply_style  # noqa: E402
 
 RUNS = os.path.join(HERE, "results", "runs")
 OUT = os.path.join(HERE, "results")

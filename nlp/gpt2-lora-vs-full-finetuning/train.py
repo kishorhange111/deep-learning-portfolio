@@ -33,7 +33,7 @@ import subprocess
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 PROJECT = "09_gpt2_lora_finetuning"
 QUICK = os.environ.get("QUICK") == "1"
@@ -77,7 +77,7 @@ def run_one(mode):
     import numpy as np
     import tensorflow as tf
 
-    from common.utils import results_dir, set_seed
+    from dl_common.utils import results_dir, set_seed
 
     set_seed(42)
     keras.mixed_precision.set_global_policy("mixed_float16")  # fp16 compute, fp32 master weights
@@ -146,7 +146,7 @@ def run_one(mode):
 
 def compare():
     """Run both modes in separate processes, then build the comparison table + chart."""
-    from common.utils import results_dir, save_results
+    from dl_common.utils import results_dir, save_results
 
     for mode in ["full", "lora"]:
         # A fresh process per mode, so the two runs' peak-GPU-memory numbers cannot mix

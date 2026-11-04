@@ -21,7 +21,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 
 GROUPS = {
     "q_proj": "attn q",
@@ -66,7 +66,7 @@ def activation_cosine(model_a, model_b, batches):
 
 def plot(wd, cos, out_path):
     """Two panels: weight change per layer and type; residual-stream cosine per layer."""
-    from common.plotting import ColorMap, apply_style
+    from dl_common.plotting import ColorMap, apply_style
 
     plt = apply_style()
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))

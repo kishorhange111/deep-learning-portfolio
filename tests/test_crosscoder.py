@@ -64,7 +64,7 @@ def test_planted_features_are_attributed_to_the_right_model(tmp_path, sparsity, 
 
 def test_collect_train_analyze_on_tiny_models(tmp_path, monkeypatch):
     pytest.importorskip("transformers")
-    from common.tiny_hf import save_tiny_chat_model
+    from dl_common.tiny_hf import save_tiny_chat_model
 
     a = save_tiny_chat_model(str(tmp_path / "a"), seed=0)
     b = save_tiny_chat_model(str(tmp_path / "b"), seed=1)
@@ -109,7 +109,7 @@ def test_collect_train_analyze_on_tiny_models(tmp_path, monkeypatch):
 
 def test_weight_diff_localises_a_planted_change():
     pytest.importorskip("transformers")
-    from common.tiny_hf import make_tiny_qwen2
+    from dl_common.tiny_hf import make_tiny_qwen2
 
     base = load_module(PROJECT, "baseline_diff.py")
     ma = make_tiny_qwen2(vocab_size=50, seed=0)

@@ -16,7 +16,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 import eval_stats as st  # noqa: E402
 from providers import cost_usd  # noqa: E402
 from run_eval import read_jsonl  # noqa: E402
@@ -248,7 +248,7 @@ def write_markdown(mcq, gen, agree, path, contam=None):
 
 def plot(mcq, gen, run_dir):
     """mcq_accuracy.png (dot-and-whisker per model and condition) and language_fidelity.png (stacked bars)."""
-    from common.plotting import ColorMap, apply_style
+    from dl_common.plotting import ColorMap, apply_style
 
     plt = apply_style()
     if mcq:

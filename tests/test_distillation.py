@@ -1,11 +1,11 @@
-"""Tests for the knowledge-distillation loss (common/distillation.py)."""
+"""Tests for the knowledge-distillation loss (src/dl_common/distillation.py)."""
 
 import pytest
 
 torch = pytest.importorskip("torch")
 import torch.nn.functional as F  # noqa: E402
 
-from common.distillation import distillation_loss  # noqa: E402
+from dl_common.distillation import distillation_loss  # noqa: E402
 
 
 def test_alpha_one_is_plain_cross_entropy():

@@ -122,7 +122,7 @@ def test_pass_at_k():
 @pytest.fixture(scope="module")
 def tiny_model_dir(tmp_path_factory):
     pytest.importorskip("transformers")
-    from common.tiny_hf import save_tiny_chat_model
+    from dl_common.tiny_hf import save_tiny_chat_model
 
     return save_tiny_chat_model(str(tmp_path_factory.mktemp("tiny")))
 

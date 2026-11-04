@@ -30,7 +30,7 @@ import random
 import sys
 import time
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import numpy as np
 import torch
@@ -38,7 +38,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from PIL import Image
 
-from common.utils import results_dir
+from dl_common.utils import results_dir
 
 PROJECT = "12_adain_style_transfer"
 QUICK = os.environ.get("QUICK") == "1"

@@ -19,7 +19,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 from flash_attention import attention_reference, flash_attention  # noqa: E402
 from softmax import softmax, softmax_naive  # noqa: E402
 
@@ -114,7 +114,7 @@ def correctness_on_gpu(dtype=torch.bfloat16):
 
 def plot(soft, attn, gpu):
     """Line charts: softmax GB/s vs N, attention fwd+bwd TFLOP/s vs T."""
-    from common.plotting import ColorMap, apply_style
+    from dl_common.plotting import ColorMap, apply_style
 
     plt = apply_style()
     colors = ColorMap(["triton fused", "torch.softmax", "eager (5 kernels)"])

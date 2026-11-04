@@ -51,11 +51,23 @@ Each project is a single, heavily commented `train.py` written to be read top to
 
 ## Layout
 ```
-research/  systems/  interpretability/  evals/  applied-ai/    the research, systems and applied-AI projects
-computer-vision/  nlp/  generative-models/                    foundations: <project>/ train.py · README.md · results/
-common/      shared helpers: seeding, time budgets, metrics, plotting style, tiny Hugging Face models for tests
-tests/       CPU-only pytest suite: no GPU, no downloads, no API keys
-RUNBOOK.md   the pending GPU / API runs, in order, with commands and expected cost
+deep-learning-portfolio/
+├── research/  systems/  interpretability/  evals/  applied-ai/
+│                                 # research, systems and applied-AI projects (see the table above)
+├── computer-vision/<project>/    # train.py · README.md · results/
+├── nlp/<project>/                # train.py · README.md · results/
+├── generative-models/<project>/  # train.py · README.md · results/
+├── src/dl_common/                # shared helpers: seeding, GPU time budgets, metrics + plots (utils.py),
+│                                 #   caption parsing + BLEU, triplet metrics, distillation loss, latency benchmark,
+│                                 #   one plotting style (plotting.py), tiny offline Hugging Face models for tests
+├── tests/                        # CPU-only pytest suite: no GPU, no downloads, no API keys
+├── .github/workflows/            # CI: ruff lint + format check, byte-compile every script, tests;
+│                                 #   plus a manual real-model eval for the SQL agent
+├── RUNBOOK.md                    # the pending GPU / API runs, in order, with commands and expected cost
+├── Makefile                      # make install / install-dev / lint / format / test
+├── pyproject.toml                # package metadata (src/dl_common), ruff + pytest config
+├── requirements.txt              # runtime stack for the training scripts
+└── requirements-dev.txt          # lint + test tooling
 ```
 
 ## Engineering practices
@@ -79,12 +91,11 @@ Trained on Google Colab GPUs (NVIDIA A100, L4, T4) with Keras 3 / TensorFlow and
 
 ## Development
 ```bash
-pip install torch --index-url https://download.pytorch.org/whl/cpu
-pip install -r requirements-dev.txt
-ruff check .        # lint
-pytest              # ~210 tests, CPU only, ~2 minutes
+pip install torch --index-url https://download.pytorch.org/whl/cpu   # CPU build is enough for the tests
+make install-dev    # = pip install -r requirements-dev.txt -e .  (installs the shared helpers package)
+make check          # ruff lint + format check, then pytest (~210 tests, CPU only, no downloads)
 ```
-CI (GitHub Actions) runs `ruff check`, byte-compiles every `train.py` and runs the test suite on every push. A second workflow ([agent-eval.yml](.github/workflows/agent-eval.yml)) runs the SQL agent eval against real model APIs on demand, using repository secrets.
+CI (GitHub Actions) runs the same checks, plus a byte-compile of every `train.py`, on every push and pull request. A second workflow ([agent-eval.yml](.github/workflows/agent-eval.yml)) runs the SQL agent eval against real model APIs on demand, using repository secrets. Optional: `pip install pre-commit && pre-commit install` runs ruff before each commit.
 
 ## Credits
 Several projects re-implement or extend [Keras code examples](https://keras.io/examples/) (Apache-2.0) — some rewritten in PyTorch, all extended with additional evaluation, baselines and documentation. Original authors are credited in each project.

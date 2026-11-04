@@ -24,7 +24,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 from decoding import expected_tokens_per_round, generate_kv, generate_speculative  # noqa: E402
 from kv_model import GPT, GPTConfig  # noqa: E402
 
@@ -167,7 +167,7 @@ def bench_spec(args):
 
 def plot(name, rows):
     """One figure per benchmark."""
-    from common.plotting import ColorMap, apply_style
+    from dl_common.plotting import ColorMap, apply_style
 
     plt = apply_style()
     fig, ax = plt.subplots(figsize=(6.4, 4))

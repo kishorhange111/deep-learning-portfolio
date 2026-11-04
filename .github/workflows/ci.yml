@@ -2,10 +2,16 @@ name: CI
 
 on:
   push:
+    branches: [main]
   pull_request:
+  workflow_dispatch:
 
 permissions:
   contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   lint-and-test:
@@ -25,10 +31,12 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install torch --index-url https://download.pytorch.org/whl/cpu
-          pip install -r requirements-dev.txt
+          pip install -r requirements-dev.txt -e .
 
-      - name: Ruff
-        run: ruff check .
+      - name: Ruff (lint + format check)
+        run: |
+          ruff check .
+          ruff format --check .
 
       - name: Compile every training script
         run: find . -name train.py -not -path "./.git/*" -print0 | xargs -0 -n1 python -m py_compile

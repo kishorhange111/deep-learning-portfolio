@@ -36,7 +36,7 @@ import os
 import subprocess
 import sys
 
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))  # repo root
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "..", "src"))  # <repo>/src
 
 import keras
 import numpy as np
@@ -44,8 +44,8 @@ import tensorflow as tf
 from keras import layers, ops
 from keras.applications import resnet
 
-from common.embeddings import triplet_batch_stats
-from common.utils import Timer, make_time_limit_callback, save_results, set_seed
+from dl_common.embeddings import triplet_batch_stats
+from dl_common.utils import Timer, make_time_limit_callback, save_results, set_seed
 
 PROJECT = "06_siamese_triplet_resnet"
 QUICK = os.environ.get("QUICK") == "1"

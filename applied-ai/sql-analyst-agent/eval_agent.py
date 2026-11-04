@@ -31,7 +31,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 import agent as ag  # noqa: E402
 import make_db  # noqa: E402
 import sql_tools  # noqa: E402
@@ -251,7 +251,7 @@ def write_report(summary, run_dir):
         f.write(text)
     pts = [(k, s) for k, s in summary.items() if "accuracy" in s and "attack_success" in s]
     if pts:
-        from common.plotting import ColorMap, apply_style
+        from dl_common.plotting import ColorMap, apply_style
 
         plt = apply_style()
         colors = ColorMap(list(sql_tools.DEFENSES))

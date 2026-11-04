@@ -33,7 +33,7 @@ import torch
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 import attn_only as ao  # noqa: E402
 
 DEFAULT_DATA = os.path.join(HERE, "..", "..", "systems", "gpt-pretraining-scaling-laws", "data", "fineweb_edu")
@@ -194,7 +194,7 @@ def make_figures(logs, final, composition, out_dir):
     """phase_change.png, head_scores.png, composition.png."""
     from matplotlib.colors import LinearSegmentedColormap
 
-    from common.plotting import ColorMap, apply_style
+    from dl_common.plotting import ColorMap, apply_style
 
     plt = apply_style()
     colors = ColorMap([f"{n}-layer" for n in sorted(logs)])

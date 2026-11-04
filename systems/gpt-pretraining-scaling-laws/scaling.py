@@ -29,7 +29,7 @@ import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
-sys.path.insert(0, os.path.join(HERE, "..", ".."))
+sys.path.insert(0, os.path.join(HERE, "..", "..", "src"))  # <repo>/src
 from gpt import PRESETS, config_for, flops_per_token, non_embedding_params  # noqa: E402
 
 RESULTS = os.path.join(HERE, "results")
@@ -298,7 +298,7 @@ def write_summary(points, a2, a3, path):
 
 def plot_isoflop(points, a2, a3, path_iso, path_frontier):
     """IsoFLOP parabolas (one sequential-blue line per budget) and the N_opt-vs-C frontier."""
-    from common.plotting import INK_2, MUTED, apply_style
+    from dl_common.plotting import INK_2, MUTED, apply_style
 
     plt = apply_style()
     blues = ["#86b6ef", "#3987e5", "#1c5cab", "#0d366b"]  # ordinal ramp: light = small budget
