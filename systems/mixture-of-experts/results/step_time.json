@@ -1,0 +1,30 @@
+{
+ "dense": {
+  "ms_per_step": 72.74880800014216,
+  "threads": 2
+ },
+ "moe8_top1": {
+  "ms_per_step": 119.31132599966077,
+  "threads": 2
+ },
+ "moe8_top2": {
+  "ms_per_step": 171.888380999917,
+  "threads": 2
+ },
+ "dense_wide": {
+  "ms_per_step": 136.71916299972509,
+  "threads": 2
+ },
+ "moe8_top1_nobal": {
+  "ms_per_step": 106.05489499903342,
+  "threads": 2
+ },
+ "moe8_top1_cap1": {
+  "ms_per_step": 98.93861999989895,
+  "threads": 2
+ },
+ "moe8_top1_unitgate": {
+  "ms_per_step": 124.98058749952179,
+  "threads": 2
+ }
+}
