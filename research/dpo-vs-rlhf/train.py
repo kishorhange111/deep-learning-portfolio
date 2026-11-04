@@ -79,6 +79,7 @@ def main(argv=None):
     out = {"settings": vars(args), "dpo": {}, "ipo": {}, "rlhf_mlp": {}, "rlhf_bigram": {}, "bon_mlp": [], "oracle": {}}
 
     def log_time(msg):
+        """Print a progress message with the elapsed time."""
         print(f"{msg} ({time.time() - t0:.0f}s)", flush=True)
 
     # the ceiling: KL-regularized RL on the gold reward itself

@@ -24,13 +24,16 @@ test:           ## run the unit tests (CPU, no downloads)
 
 check: lint test ## everything CI runs
 
-cpu-studies:    ## re-run the five CPU research studies and their analyses (several CPU-hours)
+cpu-studies:    ## re-run the eight CPU research studies and their analyses (several CPU-hours)
 	cd interpretability/grokking-modular-arithmetic && python train.py && python analyze.py
 	cd research/reward-model-overoptimization && python train.py && \
 		python train.py --w_steady 0.5 --no_extras --out results/study_mixed.json && python analyze.py
 	cd research/optimizer-study && python train.py && python train.py --bench && python analyze.py
 	cd systems/mixture-of-experts && python train.py && python train.py --bench && python analyze.py
 	cd systems/quantization-from-scratch && python train.py && python analyze.py
+	cd interpretability/sparse-autoencoders && python train.py && python analyze.py
+	cd research/dpo-vs-rlhf && python train.py && python analyze.py
+	cd systems/long-context-rope && python train.py && python analyze.py
 
 clean:          ## remove caches and build artefacts
 	rm -rf .pytest_cache .ruff_cache build dist src/*.egg-info
