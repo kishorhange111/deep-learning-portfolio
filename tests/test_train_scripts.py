@@ -15,7 +15,7 @@ SCRIPTS = sorted(ROOT.glob("*/*/train.py"))
 
 
 def test_all_projects_found():
-    assert len(SCRIPTS) == 18
+    assert len(SCRIPTS) == 23
 
 
 @pytest.mark.parametrize("path", SCRIPTS, ids=lambda p: p.parent.name)

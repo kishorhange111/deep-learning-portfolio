@@ -1,6 +1,6 @@
 # Runbook: the pending GPU and API runs
 
-The research, systems and applied-AI projects are written and tested on CPU. Their headline numbers need a GPU or API keys. This is the order to run them in, cheapest and most informative first. Times are estimates for one A100 unless stated. API costs are rough estimates, not measured: start with the `--n` / `--limit` subsets shown and look at the real per-request cost before running everything.
+The research, systems and applied-AI projects are written and tested on CPU. Five of them are CPU studies whose results are already measured and committed (grokking, reward-model overoptimization, the optimizer study, mixture of experts, quantization; section 8 has the commands to reproduce them). The others need a GPU or API keys for their headline numbers. This is the order to run them in, cheapest and most informative first. Times are estimates for one A100 unless stated. API costs are rough estimates, not measured: start with the `--n` / `--limit` subsets shown and look at the real per-request cost before running everything.
 
 After each run:
 1. Copy the generated summary (`results/.../summary.md` or similar) into that project's README **Results** section.
@@ -89,3 +89,15 @@ Rough cost: $5–15 per frontier model for all 35 tasks × 4 defenses.
 cd applied-ai/sql-analyst-agent && docker build -t shopco-agent .
 ```
 Then deploy to a container host with `ANTHROPIC_API_KEY` and `APP_TOKEN` as secrets. Put a spend limit on the API key first.
+
+## 8. Reproduce the CPU studies (no GPU, no downloads)
+These are already run; their results are committed. To regenerate them (approximate times on a 4-core cloud VM; the original runs shared its cores):
+| Study | Command | Time |
+|---|---|---|
+| Grokking | `cd interpretability/grokking-modular-arithmetic && python train.py && python analyze.py` | ~3 hours on one core (runs are independent: `--only` splits them across cores) |
+| Reward-model overoptimization | `cd research/reward-model-overoptimization && python train.py && python train.py --w_steady 0.5 --no_extras --out results/study_mixed.json && python analyze.py` | ~20 min on one core |
+| Optimizer study | `cd research/optimizer-study && python train.py && python train.py --bench && python analyze.py` | ~1 hour on 2 cores |
+| Mixture of experts | `cd systems/mixture-of-experts && python train.py && python train.py --bench && python analyze.py` | ~1.5 hours on 2 cores |
+| Quantization | `cd systems/quantization-from-scratch && python train.py && python analyze.py` | ~15 min on one core |
+
+Or all of them: `make cpu-studies`. The byte-level studies read the Python standard library's source as their corpus, so their exact numbers depend on the Python version (recorded in each result file with a SHA-256 of the corpus).

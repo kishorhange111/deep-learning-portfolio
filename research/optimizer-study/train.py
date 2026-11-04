@@ -158,7 +158,9 @@ def benchmark_step_time(args, data, rounds=5, steps_per_round=20):
     """Time a full training step (forward, backward, optimizer) for each optimizer, interleaving the
     optimizers round by round so they see the same machine load. Returns {optimizer: {...}}."""
     train = data[0]
-    cfg = ByteGPTConfig(seq_len=args.seq_len, n_layer=args.n_layer, d_model=args.d_model, n_head=4, d_ff=4 * args.d_model)
+    cfg = ByteGPTConfig(
+        seq_len=args.seq_len, n_layer=args.n_layer, d_model=args.d_model, n_head=4, d_ff=4 * args.d_model
+    )
     names = ["adamw", "lion", "muon"]
     setups = {}
     for name in names:
@@ -230,7 +232,9 @@ def main(argv=None):
         for seed in range(1, args.seeds):
             records.append(run_and_save(opt_name, lr, seed, data, args))
     # Horizon check: does the gap between AdamW and Muon survive 3x more training?
-    long_args = argparse.Namespace(**{**vars(args), "steps": LONG_STEPS if not os.environ.get("QUICK") else 2 * args.steps})
+    long_args = argparse.Namespace(
+        **{**vars(args), "steps": LONG_STEPS if not os.environ.get("QUICK") else 2 * args.steps}
+    )
     for opt_name in ("adamw", "muon"):
         if opt_name in args.optimizers:
             records.append(run_and_save(opt_name, best_lr(records, opt_name, args.steps), 0, data, long_args))

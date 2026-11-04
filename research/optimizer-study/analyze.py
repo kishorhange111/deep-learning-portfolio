@@ -94,7 +94,8 @@ def summarize(runs, step_time=None):
                 else float(np.mean([r["seconds"] for r in seeds]) / seeds[0]["settings"]["steps"])
             ),
             "optimizer_share_of_time": (
-                step_time[opt.removesuffix("+clip")]["ms_optimizer"] / step_time[opt.removesuffix("+clip")]["ms_per_step"]
+                step_time[opt.removesuffix("+clip")]["ms_optimizer"]
+                / step_time[opt.removesuffix("+clip")]["ms_per_step"]
                 if step_time and opt.removesuffix("+clip") in step_time
                 else float(np.mean([r["optimizer_seconds"] / r["seconds"] for r in seeds]))
             ),
