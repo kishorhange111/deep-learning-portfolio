@@ -1,0 +1,20 @@
+{
+ "adamw": {
+  "ms_per_step": 78.4862245000113,
+  "ms_optimizer": 4.0903219996835105,
+  "steps_timed": 100,
+  "threads": 2
+ },
+ "lion": {
+  "ms_per_step": 76.91746099999364,
+  "ms_optimizer": 3.0907874997865292,
+  "steps_timed": 100,
+  "threads": 2
+ },
+ "muon": {
+  "ms_per_step": 99.1126124999937,
+  "ms_optimizer": 23.36776500033011,
+  "steps_timed": 100,
+  "threads": 2
+ }
+}
