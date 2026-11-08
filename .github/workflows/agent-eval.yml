@@ -41,7 +41,7 @@ jobs:
           LIMIT: ${{ inputs.limit }}
         # inputs reach the shell only through environment variables, never interpolated into the script
         run: python eval_agent.py --models $MODELS --defenses $DEFENSES ${LIMIT:+--limit "$LIMIT"} --run ci
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: agent-eval-results
           path: applied-ai/sql-analyst-agent/results/ci
